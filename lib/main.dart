@@ -26,6 +26,7 @@ class CableSimApp extends StatelessWidget {
 // ----------------------------------------------------
 
 enum PortType { hdmi, typeC, typeA, acPower }
+
 enum PortGender { male, female }
 
 class DevicePort {
@@ -77,23 +78,18 @@ class CableType {
 class Cable {
   final String id;
   final CableType type;
-  
+
   // Endpoint 1
   String? fromNodeId;
   String? fromPortId;
   Offset? dragPos1; // Position when not connected
-  
+
   // Endpoint 2
   String? toNodeId;
   String? toPortId;
   Offset? dragPos2; // Position when not connected
 
-  Cable({
-    required this.id,
-    required this.type,
-    this.dragPos1,
-    this.dragPos2,
-  });
+  Cable({required this.id, required this.type, this.dragPos1, this.dragPos2});
 }
 
 // ----------------------------------------------------
@@ -162,7 +158,7 @@ class WorkspaceScreen extends StatefulWidget {
 class _WorkspaceScreenState extends State<WorkspaceScreen> {
   final List<DeviceNode> nodes = [];
   final List<Cable> cables = [];
-  
+
   // Dragging state for cables
   String? draggingCableId;
   int? draggingEndpoint; // 1 or 2
@@ -175,20 +171,60 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     List<DevicePort> presetPorts = [];
     if (name == 'PC') {
       presetPorts = [
-        DevicePort(id: 'p1', type: PortType.typeC, gender: PortGender.female, relativeCenter: const Offset(0, 30)),
-        DevicePort(id: 'p2', type: PortType.typeA, gender: PortGender.female, relativeCenter: const Offset(0, 70)),
-        DevicePort(id: 'p3', type: PortType.hdmi, gender: PortGender.female, relativeCenter: const Offset(140, 50)),
-        DevicePort(id: 'p4', type: PortType.acPower, gender: PortGender.male, relativeCenter: const Offset(70, 100)),
+        DevicePort(
+          id: 'p1',
+          type: PortType.typeC,
+          gender: PortGender.female,
+          relativeCenter: const Offset(0, 30),
+        ),
+        DevicePort(
+          id: 'p2',
+          type: PortType.typeA,
+          gender: PortGender.female,
+          relativeCenter: const Offset(0, 70),
+        ),
+        DevicePort(
+          id: 'p3',
+          type: PortType.hdmi,
+          gender: PortGender.female,
+          relativeCenter: const Offset(140, 50),
+        ),
+        DevicePort(
+          id: 'p4',
+          type: PortType.acPower,
+          gender: PortGender.male,
+          relativeCenter: const Offset(70, 100),
+        ),
       ];
     } else if (name == 'Monitor') {
-       presetPorts = [
-        DevicePort(id: 'p1', type: PortType.hdmi, gender: PortGender.female, relativeCenter: const Offset(0, 50)),
-        DevicePort(id: 'p2', type: PortType.acPower, gender: PortGender.male, relativeCenter: const Offset(70, 100)),
+      presetPorts = [
+        DevicePort(
+          id: 'p1',
+          type: PortType.hdmi,
+          gender: PortGender.female,
+          relativeCenter: const Offset(0, 50),
+        ),
+        DevicePort(
+          id: 'p2',
+          type: PortType.acPower,
+          gender: PortGender.male,
+          relativeCenter: const Offset(70, 100),
+        ),
       ];
     } else {
-       presetPorts = [
-        DevicePort(id: 'left', type: PortType.typeC, gender: PortGender.female, relativeCenter: const Offset(0, 50)),
-        DevicePort(id: 'right', type: PortType.typeA, gender: PortGender.female, relativeCenter: const Offset(140, 50)),
+      presetPorts = [
+        DevicePort(
+          id: 'left',
+          type: PortType.typeC,
+          gender: PortGender.female,
+          relativeCenter: const Offset(0, 50),
+        ),
+        DevicePort(
+          id: 'right',
+          type: PortType.typeA,
+          gender: PortGender.female,
+          relativeCenter: const Offset(140, 50),
+        ),
       ];
     }
 
@@ -217,7 +253,11 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     });
   }
 
-  bool _canConnect(PortType cableType, PortGender cableGender, DevicePort port) {
+  bool _canConnect(
+    PortType cableType,
+    PortGender cableGender,
+    DevicePort port,
+  ) {
     // Basic logic: Port types must match. Genders must be opposite.
     if (cableType != port.type) return false;
     if (cableGender == port.gender) return false;
@@ -230,13 +270,17 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         final nodeToRemove = nodes.firstWhere((n) => n.id == id);
         for (var cable in cables) {
           if (cable.fromNodeId == id) {
-            final port = nodeToRemove.ports.firstWhere((p) => p.id == cable.fromPortId);
+            final port = nodeToRemove.ports.firstWhere(
+              (p) => p.id == cable.fromPortId,
+            );
             cable.dragPos1 = nodeToRemove.position + port.relativeCenter;
             cable.fromNodeId = null;
             cable.fromPortId = null;
           }
           if (cable.toNodeId == id) {
-            final port = nodeToRemove.ports.firstWhere((p) => p.id == cable.toPortId);
+            final port = nodeToRemove.ports.firstWhere(
+              (p) => p.id == cable.toPortId,
+            );
             cable.dragPos2 = nodeToRemove.position + port.relativeCenter;
             cable.toNodeId = null;
             cable.toPortId = null;
@@ -292,13 +336,39 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                const Text('Devices', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                const Text(
+                  'Devices',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
                 const SizedBox(height: 16),
-                _buildSidebarButton('Add PC', Icons.computer, () => _addDevice('PC')),
-                _buildSidebarButton('Add Monitor', Icons.monitor, () => _addDevice('Monitor')),
-                _buildSidebarButton('Add USB Hub', Icons.hub, () => _addDevice('USB Hub')),
+                _buildSidebarButton(
+                  'Add PC',
+                  Icons.computer,
+                  () => _addDevice('PC'),
+                ),
+                _buildSidebarButton(
+                  'Add Monitor',
+                  Icons.monitor,
+                  () => _addDevice('Monitor'),
+                ),
+                _buildSidebarButton(
+                  'Add USB Hub',
+                  Icons.hub,
+                  () => _addDevice('USB Hub'),
+                ),
                 const Divider(height: 48),
-                const Text('Cables', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                const Text(
+                  'Cables',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
                 const SizedBox(height: 16),
                 ...availableCables.map((type) => _buildCableButton(type)),
               ],
@@ -326,57 +396,75 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
 
                   // Devices Layer
                   ...nodes.map((node) {
-                      return Positioned(
-                        left: node.position.dx,
-                        top: node.position.dy,
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              selectedNodeId = node.id;
-                              selectedCableId = null;
-                            });
-                          },
-                          onPanUpdate: (details) {
-                            setState(() {
-                              node.position += details.delta;
-                            });
-                          },
-                          child: Container(
-                            width: 140,
-                            height: 100,
-                            decoration: BoxDecoration(
-                              color: selectedNodeId == node.id ? Colors.blue.shade50 : Colors.white,
-                              border: Border.all(
-                                color: selectedNodeId == node.id ? Colors.blue : Colors.blueGrey,
-                                width: selectedNodeId == node.id ? 3 : 2,
+                    return Positioned(
+                      left: node.position.dx,
+                      top: node.position.dy,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            selectedNodeId = node.id;
+                            selectedCableId = null;
+                          });
+                        },
+                        onPanUpdate: (details) {
+                          setState(() {
+                            node.position += details.delta;
+                          });
+                        },
+                        child: Container(
+                          width: 140,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            color: selectedNodeId == node.id
+                                ? Colors.blue.shade50
+                                : Colors.white,
+                            border: Border.all(
+                              color: selectedNodeId == node.id
+                                  ? Colors.blue
+                                  : Colors.blueGrey,
+                              width: selectedNodeId == node.id ? 3 : 2,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: selectedNodeId == node.id
+                                    ? Colors.blue.withOpacity(0.3)
+                                    : Colors.black.withOpacity(0.05),
+                                blurRadius: selectedNodeId == node.id ? 15 : 10,
+                                offset: const Offset(0, 4),
                               ),
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: selectedNodeId == node.id ? Colors.blue.withOpacity(0.3) : Colors.black.withOpacity(0.05),
-                                  blurRadius: selectedNodeId == node.id ? 15 : 10,
-                                  offset: const Offset(0, 4),
+                            ],
+                          ),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Center(
+                                child: Text(
+                                  node.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ],
-                            ),
-                            child: Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                Center(child: Text(node.name, style: const TextStyle(fontWeight: FontWeight.bold))),
-                                ...node.ports.map((p) => _buildPortWidget(node, p)),
-                              ],
-                            ),
+                              ),
+                              ...node.ports.map(
+                                (p) => _buildPortWidget(node, p),
+                              ),
+                            ],
                           ),
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    );
+                  }),
 
                   // Cables Layer
                   Positioned.fill(
                     child: IgnorePointer(
                       child: CustomPaint(
-                        painter: CablePainter(nodes: nodes, cables: cables, selectedCableId: selectedCableId),
+                        painter: CablePainter(
+                          nodes: nodes,
+                          cables: cables,
+                          selectedCableId: selectedCableId,
+                        ),
                       ),
                     ),
                   ),
@@ -392,7 +480,11 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     );
   }
 
-  Widget _buildSidebarButton(String label, IconData icon, VoidCallback? onPressed) {
+  Widget _buildSidebarButton(
+    String label,
+    IconData icon,
+    VoidCallback? onPressed,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: ElevatedButton.icon(
@@ -424,9 +516,18 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         ),
         child: Row(
           children: [
-            Container(width: 12, height: 12, decoration: BoxDecoration(color: type.color, shape: BoxShape.circle)),
+            Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: type.color,
+                shape: BoxShape.circle,
+              ),
+            ),
             const SizedBox(width: 8),
-            Expanded(child: Text(type.name, style: const TextStyle(fontSize: 13))),
+            Expanded(
+              child: Text(type.name, style: const TextStyle(fontSize: 13)),
+            ),
           ],
         ),
       ),
@@ -445,15 +546,22 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           decoration: BoxDecoration(
             color: _getColorForPortType(port.type).withOpacity(0.1),
             borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: _getColorForPortType(port.type).withOpacity(0.5), width: 1),
+            border: Border.all(
+              color: _getColorForPortType(port.type).withOpacity(0.5),
+              width: 1,
+            ),
           ),
           child: Center(
             child: SizedBox(
-               width: 24,
-               height: 16,
-               child: CustomPaint(
-                 painter: PortShapePainter(type: port.type, gender: port.gender, baseColor: _getColorForPortType(port.type)),
-               ),
+              width: 24,
+              height: 16,
+              child: CustomPaint(
+                painter: PortShapePainter(
+                  type: port.type,
+                  gender: port.gender,
+                  baseColor: _getColorForPortType(port.type),
+                ),
+              ),
             ),
           ),
         ),
@@ -491,9 +599,18 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     return widgets;
   }
 
-  Widget _buildEndpointDraggable(Cable cable, int endpointIndex, Offset position, bool isConnected) {
-    final cableType = endpointIndex == 1 ? cable.type.end1Type : cable.type.end2Type;
-    final cableGender = endpointIndex == 1 ? cable.type.end1Gender : cable.type.end2Gender;
+  Widget _buildEndpointDraggable(
+    Cable cable,
+    int endpointIndex,
+    Offset position,
+    bool isConnected,
+  ) {
+    final cableType = endpointIndex == 1
+        ? cable.type.end1Type
+        : cable.type.end2Type;
+    final cableGender = endpointIndex == 1
+        ? cable.type.end1Gender
+        : cable.type.end2Gender;
 
     final isSelected = selectedCableId == cable.id;
     return Positioned(
@@ -536,7 +653,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           }
         },
         onPanEnd: (details) {
-          final currentPos = endpointIndex == 1 ? cable.dragPos1! : cable.dragPos2!;
+          final currentPos = endpointIndex == 1
+              ? cable.dragPos1!
+              : cable.dragPos2!;
           _handleEndpointDrop(cable, endpointIndex, currentPos);
         },
         child: MouseRegion(
@@ -544,30 +663,53 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           child: Tooltip(
             message: 'Drag to connect / Click to select',
             child: Container(
-               width: 36,
-               height: 28,
-               decoration: BoxDecoration(
-                 color: isConnected ? Colors.lightGreen.shade50 : Colors.white,
-                 borderRadius: BorderRadius.circular(6),
-                 border: Border.all(
-                   color: isSelected ? Colors.blue : (isConnected ? Colors.green : _getColorForPortType(cableType)), 
-                   width: isSelected || isConnected ? 3 : 2
-                 ),
-                 boxShadow: [
-                   if (isSelected) const BoxShadow(color: Colors.blueAccent, blurRadius: 10, spreadRadius: 2)
-                   else if (isConnected) const BoxShadow(color: Colors.greenAccent, blurRadius: 8, spreadRadius: 1)
-                   else const BoxShadow(color: Colors.black38, blurRadius: 4, offset: Offset(0, 2))
-                 ]
-               ),
-               child: Center(
-                 child: SizedBox(
-                   width: 24,
-                   height: 16,
-                   child: CustomPaint(
-                     painter: PortShapePainter(type: cableType, gender: cableGender, baseColor: _getColorForPortType(cableType)),
-                   ),
-                 ),
-               ),
+              width: 36,
+              height: 28,
+              decoration: BoxDecoration(
+                color: isConnected ? Colors.lightGreen.shade50 : Colors.white,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: isSelected
+                      ? Colors.blue
+                      : (isConnected
+                            ? Colors.green
+                            : _getColorForPortType(cableType)),
+                  width: isSelected || isConnected ? 3 : 2,
+                ),
+                boxShadow: [
+                  if (isSelected)
+                    const BoxShadow(
+                      color: Colors.blueAccent,
+                      blurRadius: 10,
+                      spreadRadius: 2,
+                    )
+                  else if (isConnected)
+                    const BoxShadow(
+                      color: Colors.greenAccent,
+                      blurRadius: 8,
+                      spreadRadius: 1,
+                    )
+                  else
+                    const BoxShadow(
+                      color: Colors.black38,
+                      blurRadius: 4,
+                      offset: Offset(0, 2),
+                    ),
+                ],
+              ),
+              child: Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 16,
+                  child: CustomPaint(
+                    painter: PortShapePainter(
+                      type: cableType,
+                      gender: cableGender,
+                      baseColor: _getColorForPortType(cableType),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -581,40 +723,52 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     double minDistance = 40.0;
     String? errorMessage;
 
-    final cType = endpointIndex == 1 ? cable.type.end1Type : cable.type.end2Type;
-    final cGen = endpointIndex == 1 ? cable.type.end1Gender : cable.type.end2Gender;
+    final cType = endpointIndex == 1
+        ? cable.type.end1Type
+        : cable.type.end2Type;
+    final cGen = endpointIndex == 1
+        ? cable.type.end1Gender
+        : cable.type.end2Gender;
 
     for (var n in nodes) {
       for (var p in n.ports) {
         // Prevent connecting both ends to identical port
-        if (endpointIndex == 1 && cable.toNodeId == n.id && cable.toPortId == p.id) continue;
-        if (endpointIndex == 2 && cable.fromNodeId == n.id && cable.fromPortId == p.id) continue;
+        if (endpointIndex == 1 &&
+            cable.toNodeId == n.id &&
+            cable.toPortId == p.id)
+          continue;
+        if (endpointIndex == 2 &&
+            cable.fromNodeId == n.id &&
+            cable.fromPortId == p.id)
+          continue;
 
         final portAbsPos = n.position + p.relativeCenter;
         final distance = (portAbsPos - currentPos).distance;
-        
+
         if (distance < minDistance) {
-            bool isOccupied = cables.any((c) => 
-               (c.fromNodeId == n.id && c.fromPortId == p.id) ||
-               (c.toNodeId == n.id && c.toPortId == p.id)
-            );
+          bool isOccupied = cables.any(
+            (c) =>
+                (c.fromNodeId == n.id && c.fromPortId == p.id) ||
+                (c.toNodeId == n.id && c.toPortId == p.id),
+          );
 
-            if (isOccupied) {
-              errorMessage = 'Cannot connect: Port is already occupied';
-              continue;
-            }
+          if (isOccupied) {
+            errorMessage = 'Cannot connect: Port is already occupied';
+            continue;
+          }
 
-            // Check compatibility
-            if (_canConnect(cType, cGen, p)) {
-              minDistance = distance;
-              targetPort = p;
-              targetNode = n;
-              errorMessage = null; // Clear error if valid port is found closer
-            } else {
-               if (errorMessage == null) {
-                 errorMessage = 'Cannot connect: Incompatible ports (Type or Gender mismatch)';
-               }
+          // Check compatibility
+          if (_canConnect(cType, cGen, p)) {
+            minDistance = distance;
+            targetPort = p;
+            targetNode = n;
+            errorMessage = null; // Clear error if valid port is found closer
+          } else {
+            if (errorMessage == null) {
+              errorMessage =
+                  'Cannot connect: Incompatible ports (Type or Gender mismatch)';
             }
+          }
         }
       }
     }
@@ -636,7 +790,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         // Clear previous tooltips to avoid stacking the same message repeatedly
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage), duration: const Duration(seconds: 2))
+          SnackBar(
+            content: Text(errorMessage),
+            duration: const Duration(seconds: 2),
+          ),
         );
       }
       setState(() {
@@ -652,7 +809,11 @@ class CablePainter extends CustomPainter {
   final List<Cable> cables;
   final String? selectedCableId;
 
-  CablePainter({required this.nodes, required this.cables, this.selectedCableId});
+  CablePainter({
+    required this.nodes,
+    required this.cables,
+    this.selectedCableId,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -665,7 +826,9 @@ class CablePainter extends CustomPainter {
         ..strokeCap = StrokeCap.round;
 
       Offset startPos;
-      if (cable.fromNodeId != null && cable.fromPortId != null && nodes.any((n) => n.id == cable.fromNodeId)) {
+      if (cable.fromNodeId != null &&
+          cable.fromPortId != null &&
+          nodes.any((n) => n.id == cable.fromNodeId)) {
         final node = nodes.firstWhere((n) => n.id == cable.fromNodeId);
         final port = node.ports.firstWhere((p) => p.id == cable.fromPortId);
         startPos = node.position + port.relativeCenter;
@@ -674,7 +837,9 @@ class CablePainter extends CustomPainter {
       }
 
       Offset endPos;
-      if (cable.toNodeId != null && cable.toPortId != null && nodes.any((n) => n.id == cable.toNodeId)) {
+      if (cable.toNodeId != null &&
+          cable.toPortId != null &&
+          nodes.any((n) => n.id == cable.toNodeId)) {
         final node = nodes.firstWhere((n) => n.id == cable.toNodeId);
         final port = node.ports.firstWhere((p) => p.id == cable.toPortId);
         endPos = node.position + port.relativeCenter;
@@ -685,19 +850,29 @@ class CablePainter extends CustomPainter {
       // Draw curved line
       final path = Path();
       path.moveTo(startPos.dx, startPos.dy);
-      
+
       final dx = (endPos.dx - startPos.dx).abs();
       // Ensure there's always a bit of curve even for vertical lines
       final controlOffset = dx * 0.5 + 40.0;
-      
+
       path.cubicTo(
-        startPos.dx + controlOffset, startPos.dy,
-        endPos.dx - controlOffset, endPos.dy,
-        endPos.dx, endPos.dy,
+        startPos.dx + controlOffset,
+        startPos.dy,
+        endPos.dx - controlOffset,
+        endPos.dy,
+        endPos.dx,
+        endPos.dy,
       );
 
       // Add a slight shadow to make cables pop
-      canvas.drawPath(path, Paint()..color=Colors.black26..strokeWidth=8..style=PaintingStyle.stroke..maskFilter=const MaskFilter.blur(BlurStyle.normal, 3));
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = Colors.black26
+          ..strokeWidth = 8
+          ..style = PaintingStyle.stroke
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+      );
       canvas.drawPath(path, paint);
     }
   }
@@ -713,16 +888,22 @@ class PortShapePainter extends CustomPainter {
   final PortGender gender;
   final Color baseColor;
 
-  PortShapePainter({required this.type, required this.gender, required this.baseColor});
+  PortShapePainter({
+    required this.type,
+    required this.gender,
+    required this.baseColor,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = gender == PortGender.female ? Colors.black87 : Colors.grey[300]!
       ..style = PaintingStyle.fill;
-      
+
     final borderPaint = Paint()
-      ..color = gender == PortGender.female ? Colors.grey[700]! : Colors.grey[600]!
+      ..color = gender == PortGender.female
+          ? Colors.grey[700]!
+          : Colors.grey[600]!
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
 
@@ -740,53 +921,82 @@ class PortShapePainter extends CustomPainter {
       path.lineTo(6, size.height - 2);
       path.lineTo(2, size.height - 6);
       path.close();
-      
+
       canvas.drawPath(path, paint);
       canvas.drawPath(path, borderPaint);
-      
+
       if (gender == PortGender.male) {
         // Draw pins
-        canvas.drawRect(Rect.fromLTWH(size.width/2 - 4, size.height/2 - 1, 8, 2), pinPaint);
+        canvas.drawRect(
+          Rect.fromLTWH(size.width / 2 - 4, size.height / 2 - 1, 8, 2),
+          pinPaint,
+        );
       }
     } else if (type == PortType.typeC) {
       // Type-C: Oval
       final rrect = RRect.fromRectAndRadius(
         Rect.fromLTWH(2, 4, size.width - 4, size.height - 8),
-        const Radius.circular(6)
+        const Radius.circular(6),
       );
       canvas.drawRRect(rrect, paint);
       canvas.drawRRect(rrect, borderPaint);
-      
+
       if (gender == PortGender.male) {
-         canvas.drawRect(Rect.fromLTWH(size.width/2 - 3, size.height/2 - 1, 6, 2), pinPaint);
+        canvas.drawRect(
+          Rect.fromLTWH(size.width / 2 - 3, size.height / 2 - 1, 6, 2),
+          pinPaint,
+        );
       }
     } else if (type == PortType.typeA) {
       // Type-A: Rectangle
       final rect = Rect.fromLTWH(2, 2, size.width - 4, size.height - 8);
       canvas.drawRect(rect, paint);
       canvas.drawRect(rect, borderPaint);
-      
+
       if (gender == PortGender.male) {
         // Top block in Type A
-        canvas.drawRect(Rect.fromLTWH(2, 2, size.width - 4, (size.height - 8) / 2), Paint()..color = Colors.white);
+        canvas.drawRect(
+          Rect.fromLTWH(2, 2, size.width - 4, (size.height - 8) / 2),
+          Paint()..color = Colors.white,
+        );
       } else {
         // Bottom block in Type A female
-        canvas.drawRect(Rect.fromLTWH(4, 2 + (size.height - 8) / 2, size.width - 8, (size.height - 8) / 2 - 1), Paint()..color = Colors.white24);
+        canvas.drawRect(
+          Rect.fromLTWH(
+            4,
+            2 + (size.height - 8) / 2,
+            size.width - 8,
+            (size.height - 8) / 2 - 1,
+          ),
+          Paint()..color = Colors.white24,
+        );
       }
     } else if (type == PortType.acPower) {
       // AC Power: 2 or 3 prongs
       final rect = Rect.fromLTWH(4, 2, size.width - 8, size.height - 4);
       canvas.drawRect(rect, paint);
       canvas.drawRect(rect, borderPaint);
-      
+
       if (gender == PortGender.male) {
         // 2 Prongs sticking out
-        canvas.drawRect(Rect.fromLTWH(size.width/2 - 6, size.height/2 - 4, 3, 8), pinPaint);
-        canvas.drawRect(Rect.fromLTWH(size.width/2 + 3, size.height/2 - 4, 3, 8), pinPaint);
+        canvas.drawRect(
+          Rect.fromLTWH(size.width / 2 - 6, size.height / 2 - 4, 3, 8),
+          pinPaint,
+        );
+        canvas.drawRect(
+          Rect.fromLTWH(size.width / 2 + 3, size.height / 2 - 4, 3, 8),
+          pinPaint,
+        );
       } else {
         // 2 Holes
-        canvas.drawRect(Rect.fromLTWH(size.width/2 - 6, size.height/2 - 3, 3, 6), Paint()..color = Colors.black);
-        canvas.drawRect(Rect.fromLTWH(size.width/2 + 3, size.height/2 - 3, 3, 6), Paint()..color = Colors.black);
+        canvas.drawRect(
+          Rect.fromLTWH(size.width / 2 - 6, size.height / 2 - 3, 3, 6),
+          Paint()..color = Colors.black,
+        );
+        canvas.drawRect(
+          Rect.fromLTWH(size.width / 2 + 3, size.height / 2 - 3, 3, 6),
+          Paint()..color = Colors.black,
+        );
       }
     }
   }
@@ -796,4 +1006,3 @@ class PortShapePainter extends CustomPainter {
     return oldDelegate.type != type || oldDelegate.gender != gender;
   }
 }
-
