@@ -11,6 +11,7 @@ class CableSimApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'CableSim',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2C3E50)),
         useMaterial3: true,
@@ -166,6 +167,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   String? draggingCableId;
   int? draggingEndpoint; // 1 or 2
 
+  // Selection state
+  String? selectedNodeId;
+  String? selectedCableId;
+
   void _addDevice(String name) {
     List<DevicePort> presetPorts = [];
     if (name == 'PC') {
@@ -219,6 +224,35 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     return true;
   }
 
+  void _removeDevice(String id) {
+    setState(() {
+      try {
+        final nodeToRemove = nodes.firstWhere((n) => n.id == id);
+        for (var cable in cables) {
+          if (cable.fromNodeId == id) {
+            final port = nodeToRemove.ports.firstWhere((p) => p.id == cable.fromPortId);
+            cable.dragPos1 = nodeToRemove.position + port.relativeCenter;
+            cable.fromNodeId = null;
+            cable.fromPortId = null;
+          }
+          if (cable.toNodeId == id) {
+            final port = nodeToRemove.ports.firstWhere((p) => p.id == cable.toPortId);
+            cable.dragPos2 = nodeToRemove.position + port.relativeCenter;
+            cable.toNodeId = null;
+            cable.toPortId = null;
+          }
+        }
+      } catch (e) {}
+      nodes.removeWhere((n) => n.id == id);
+    });
+  }
+
+  void _removeCable(String id) {
+    setState(() {
+      cables.removeWhere((c) => c.id == id);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -229,6 +263,22 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         ),
         backgroundColor: Theme.of(context).colorScheme.primary,
         elevation: 0,
+        actions: [
+          if (selectedNodeId != null || selectedCableId != null)
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.redAccent),
+              tooltip: 'Delete selected',
+              onPressed: () {
+                if (selectedNodeId != null) {
+                  _removeDevice(selectedNodeId!);
+                  setState(() => selectedNodeId = null);
+                } else if (selectedCableId != null) {
+                  _removeCable(selectedCableId!);
+                  setState(() => selectedCableId = null);
+                }
+              },
+            ),
+        ],
       ),
       body: Row(
         children: [
@@ -261,12 +311,31 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
+                  // Background tap to deselect
+                  Positioned.fill(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          selectedNodeId = null;
+                          selectedCableId = null;
+                        });
+                      },
+                      behavior: HitTestBehavior.translucent,
+                    ),
+                  ),
+
                   // Devices Layer
                   ...nodes.map((node) {
                       return Positioned(
                         left: node.position.dx,
                         top: node.position.dy,
                         child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              selectedNodeId = node.id;
+                              selectedCableId = null;
+                            });
+                          },
                           onPanUpdate: (details) {
                             setState(() {
                               node.position += details.delta;
@@ -276,13 +345,16 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                             width: 140,
                             height: 100,
                             decoration: BoxDecoration(
-                              color: Colors.white,
-                              border: Border.all(color: Colors.blueGrey, width: 2),
+                              color: selectedNodeId == node.id ? Colors.blue.shade50 : Colors.white,
+                              border: Border.all(
+                                color: selectedNodeId == node.id ? Colors.blue : Colors.blueGrey,
+                                width: selectedNodeId == node.id ? 3 : 2,
+                              ),
                               borderRadius: BorderRadius.circular(12),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 10,
+                                  color: selectedNodeId == node.id ? Colors.blue.withOpacity(0.3) : Colors.black.withOpacity(0.05),
+                                  blurRadius: selectedNodeId == node.id ? 15 : 10,
                                   offset: const Offset(0, 4),
                                 ),
                               ],
@@ -304,7 +376,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                   Positioned.fill(
                     child: IgnorePointer(
                       child: CustomPaint(
-                        painter: CablePainter(nodes: nodes, cables: cables),
+                        painter: CablePainter(nodes: nodes, cables: cables, selectedCableId: selectedCableId),
                       ),
                     ),
                   ),
@@ -423,14 +495,23 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     final cableType = endpointIndex == 1 ? cable.type.end1Type : cable.type.end2Type;
     final cableGender = endpointIndex == 1 ? cable.type.end1Gender : cable.type.end2Gender;
 
+    final isSelected = selectedCableId == cable.id;
     return Positioned(
       left: position.dx - 18,
       top: position.dy - 14,
       child: GestureDetector(
+        onTap: () {
+          setState(() {
+            selectedCableId = cable.id;
+            selectedNodeId = null;
+          });
+        },
         onPanStart: (details) {
           setState(() {
             draggingCableId = cable.id;
             draggingEndpoint = endpointIndex;
+            selectedCableId = cable.id;
+            selectedNodeId = null;
             // Detach if it was connected
             if (endpointIndex == 1) {
               if (cable.fromNodeId != null) cable.dragPos1 = position;
@@ -460,29 +541,34 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         },
         child: MouseRegion(
           cursor: SystemMouseCursors.grab,
-          child: Container(
-             width: 36,
-             height: 28,
-             decoration: BoxDecoration(
-               color: isConnected ? Colors.lightGreen.shade50 : Colors.white,
-               borderRadius: BorderRadius.circular(6),
-               border: Border.all(
-                 color: isConnected ? Colors.green : _getColorForPortType(cableType), 
-                 width: isConnected ? 3 : 2
+          child: Tooltip(
+            message: 'Drag to connect / Click to select',
+            child: Container(
+               width: 36,
+               height: 28,
+               decoration: BoxDecoration(
+                 color: isConnected ? Colors.lightGreen.shade50 : Colors.white,
+                 borderRadius: BorderRadius.circular(6),
+                 border: Border.all(
+                   color: isSelected ? Colors.blue : (isConnected ? Colors.green : _getColorForPortType(cableType)), 
+                   width: isSelected || isConnected ? 3 : 2
+                 ),
+                 boxShadow: [
+                   if (isSelected) const BoxShadow(color: Colors.blueAccent, blurRadius: 10, spreadRadius: 2)
+                   else if (isConnected) const BoxShadow(color: Colors.greenAccent, blurRadius: 8, spreadRadius: 1)
+                   else const BoxShadow(color: Colors.black38, blurRadius: 4, offset: Offset(0, 2))
+                 ]
                ),
-               boxShadow: isConnected
-                   ? [const BoxShadow(color: Colors.greenAccent, blurRadius: 8, spreadRadius: 1)]
-                   : const [BoxShadow(color: Colors.black38, blurRadius: 4, offset: Offset(0, 2))],
-             ),
-             child: Center(
-               child: SizedBox(
-                 width: 24,
-                 height: 16,
-                 child: CustomPaint(
-                   painter: PortShapePainter(type: cableType, gender: cableGender, baseColor: _getColorForPortType(cableType)),
+               child: Center(
+                 child: SizedBox(
+                   width: 24,
+                   height: 16,
+                   child: CustomPaint(
+                     painter: PortShapePainter(type: cableType, gender: cableGender, baseColor: _getColorForPortType(cableType)),
+                   ),
                  ),
                ),
-             ),
+            ),
           ),
         ),
       ),
@@ -493,6 +579,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     DevicePort? targetPort;
     DeviceNode? targetNode;
     double minDistance = 40.0;
+    String? errorMessage;
 
     final cType = endpointIndex == 1 ? cable.type.end1Type : cable.type.end2Type;
     final cGen = endpointIndex == 1 ? cable.type.end1Gender : cable.type.end2Gender;
@@ -507,49 +594,73 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         final distance = (portAbsPos - currentPos).distance;
         
         if (distance < minDistance) {
+            bool isOccupied = cables.any((c) => 
+               (c.fromNodeId == n.id && c.fromPortId == p.id) ||
+               (c.toNodeId == n.id && c.toPortId == p.id)
+            );
+
+            if (isOccupied) {
+              errorMessage = 'Cannot connect: Port is already occupied';
+              continue;
+            }
+
             // Check compatibility
             if (_canConnect(cType, cGen, p)) {
               minDistance = distance;
               targetPort = p;
               targetNode = n;
+              errorMessage = null; // Clear error if valid port is found closer
             } else {
-               // Show snackbar for invalid connection
-               ScaffoldMessenger.of(context).showSnackBar(
-                 SnackBar(content: Text('Cannot connect: Incompatible ports (Type or Gender mismatch)'), duration: const Duration(seconds: 2))
-               );
+               if (errorMessage == null) {
+                 errorMessage = 'Cannot connect: Incompatible ports (Type or Gender mismatch)';
+               }
             }
         }
       }
     }
 
-    setState(() {
-      if (targetPort != null && targetNode != null) {
+    if (targetPort != null && targetNode != null) {
+      setState(() {
         if (endpointIndex == 1) {
-          cable.fromNodeId = targetNode.id;
-          cable.fromPortId = targetPort.id;
+          cable.fromNodeId = targetNode!.id;
+          cable.fromPortId = targetPort!.id;
         } else {
-          cable.toNodeId = targetNode.id;
-          cable.toPortId = targetPort.id;
+          cable.toNodeId = targetNode!.id;
+          cable.toPortId = targetPort!.id;
         }
+        draggingCableId = null;
+        draggingEndpoint = null;
+      });
+    } else {
+      if (errorMessage != null) {
+        // Clear previous tooltips to avoid stacking the same message repeatedly
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage), duration: const Duration(seconds: 2))
+        );
       }
-      draggingCableId = null;
-      draggingEndpoint = null;
-    });
+      setState(() {
+        draggingCableId = null;
+        draggingEndpoint = null;
+      });
+    }
   }
 }
 
 class CablePainter extends CustomPainter {
   final List<DeviceNode> nodes;
   final List<Cable> cables;
+  final String? selectedCableId;
 
-  CablePainter({required this.nodes, required this.cables});
+  CablePainter({required this.nodes, required this.cables, this.selectedCableId});
 
   @override
   void paint(Canvas canvas, Size size) {
     for (var cable in cables) {
+      final isSelected = selectedCableId == cable.id;
       final paint = Paint()
-        ..color = cable.type.color
-        ..strokeWidth = 6
+        ..color = isSelected ? Colors.blue : cable.type.color
+        ..strokeWidth = isSelected ? 8 : 6
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round;
 
