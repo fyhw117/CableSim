@@ -392,17 +392,34 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   List<Widget> _buildCableEndpoints() {
     List<Widget> widgets = [];
     for (var cable in cables) {
-      if (cable.fromNodeId == null && cable.dragPos1 != null) {
-        widgets.add(_buildEndpointDraggable(cable, 1, cable.dragPos1!));
+      Offset pos1;
+      bool isConnected1 = false;
+      if (cable.fromNodeId != null && cable.fromPortId != null) {
+        final node = nodes.firstWhere((n) => n.id == cable.fromNodeId);
+        final port = node.ports.firstWhere((p) => p.id == cable.fromPortId);
+        pos1 = node.position + port.relativeCenter;
+        isConnected1 = true;
+      } else {
+        pos1 = cable.dragPos1 ?? const Offset(0, 0);
       }
-      if (cable.toNodeId == null && cable.dragPos2 != null) {
-        widgets.add(_buildEndpointDraggable(cable, 2, cable.dragPos2!));
+      widgets.add(_buildEndpointDraggable(cable, 1, pos1, isConnected1));
+
+      Offset pos2;
+      bool isConnected2 = false;
+      if (cable.toNodeId != null && cable.toPortId != null) {
+        final node = nodes.firstWhere((n) => n.id == cable.toNodeId);
+        final port = node.ports.firstWhere((p) => p.id == cable.toPortId);
+        pos2 = node.position + port.relativeCenter;
+        isConnected2 = true;
+      } else {
+        pos2 = cable.dragPos2 ?? const Offset(0, 0);
       }
+      widgets.add(_buildEndpointDraggable(cable, 2, pos2, isConnected2));
     }
     return widgets;
   }
 
-  Widget _buildEndpointDraggable(Cable cable, int endpointIndex, Offset position) {
+  Widget _buildEndpointDraggable(Cable cable, int endpointIndex, Offset position, bool isConnected) {
     final cableType = endpointIndex == 1 ? cable.type.end1Type : cable.type.end2Type;
     final cableGender = endpointIndex == 1 ? cable.type.end1Gender : cable.type.end2Gender;
 
@@ -416,9 +433,11 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
             draggingEndpoint = endpointIndex;
             // Detach if it was connected
             if (endpointIndex == 1) {
+              if (cable.fromNodeId != null) cable.dragPos1 = position;
               cable.fromNodeId = null;
               cable.fromPortId = null;
             } else {
+              if (cable.toNodeId != null) cable.dragPos2 = position;
               cable.toNodeId = null;
               cable.toPortId = null;
             }
@@ -436,7 +455,8 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           }
         },
         onPanEnd: (details) {
-          _handleEndpointDrop(cable, endpointIndex, position);
+          final currentPos = endpointIndex == 1 ? cable.dragPos1! : cable.dragPos2!;
+          _handleEndpointDrop(cable, endpointIndex, currentPos);
         },
         child: MouseRegion(
           cursor: SystemMouseCursors.grab,
@@ -444,10 +464,15 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
              width: 36,
              height: 28,
              decoration: BoxDecoration(
-               color: Colors.white,
+               color: isConnected ? Colors.lightGreen.shade50 : Colors.white,
                borderRadius: BorderRadius.circular(6),
-               border: Border.all(color: _getColorForPortType(cableType), width: 2),
-               boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 4, offset: Offset(0, 2))],
+               border: Border.all(
+                 color: isConnected ? Colors.green : _getColorForPortType(cableType), 
+                 width: isConnected ? 3 : 2
+               ),
+               boxShadow: isConnected
+                   ? [const BoxShadow(color: Colors.greenAccent, blurRadius: 8, spreadRadius: 1)]
+                   : const [BoxShadow(color: Colors.black38, blurRadius: 4, offset: Offset(0, 2))],
              ),
              child: Center(
                child: SizedBox(
