@@ -306,7 +306,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
             cable.toPortId = null;
           }
         }
-      } catch (e) {}
+      } catch (e) {
+        // Ignored
+      }
       nodes.removeWhere((n) => n.id == id);
     });
   }
@@ -811,8 +813,8 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                             boxShadow: [
                               BoxShadow(
                                 color: selectedNodeId == node.id
-                                    ? Colors.blue.withOpacity(0.3)
-                                    : Colors.black.withOpacity(0.05),
+                                    ? Colors.blue.withValues(alpha: 0.3)
+                                    : Colors.black.withValues(alpha: 0.05),
                                 blurRadius: selectedNodeId == node.id ? 15 : 10,
                                 offset: const Offset(0, 4),
                               ),
@@ -976,10 +978,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           width: 32,
           height: 24,
           decoration: BoxDecoration(
-            color: _getColorForPortType(port.type).withOpacity(0.1),
+            color: _getColorForPortType(port.type).withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(4),
             border: Border.all(
-              color: _getColorForPortType(port.type).withOpacity(0.5),
+              color: _getColorForPortType(port.type).withValues(alpha: 0.5),
               width: 1,
             ),
           ),
@@ -1167,12 +1169,14 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         // Prevent connecting both ends to identical port
         if (endpointIndex == 1 &&
             cable.toNodeId == n.id &&
-            cable.toPortId == p.id)
+            cable.toPortId == p.id) {
           continue;
+        }
         if (endpointIndex == 2 &&
             cable.fromNodeId == n.id &&
-            cable.fromPortId == p.id)
+            cable.fromPortId == p.id) {
           continue;
+        }
 
         final portAbsPos = n.position + p.relativeCenter;
         final distance = (portAbsPos - currentPos).distance;
@@ -1196,10 +1200,8 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
             targetNode = n;
             errorMessage = null; // Clear error if valid port is found closer
           } else {
-            if (errorMessage == null) {
-              errorMessage =
-                  'Cannot connect: Incompatible ports (Type or Gender mismatch)';
-            }
+            errorMessage ??=
+                'Cannot connect: Incompatible ports (Type or Gender mismatch)';
           }
         }
       }
