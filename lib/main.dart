@@ -43,17 +43,31 @@ class DevicePort {
   });
 }
 
+class DeviceTemplate {
+  final String id;
+  final String name;
+  final List<DevicePort> ports;
+
+  DeviceTemplate({
+    required this.id,
+    required this.name,
+    required this.ports,
+  });
+}
+
 class DeviceNode {
   final String id;
   final String name;
   Offset position;
   final List<DevicePort> ports;
+  final String? templateId;
 
   DeviceNode({
     required this.id,
     required this.name,
     required this.position,
     required this.ports,
+    this.templateId,
   });
 }
 
@@ -64,6 +78,7 @@ class CableType {
   final PortType end2Type;
   final PortGender end2Gender;
   final Color color;
+  final bool isCustom;
 
   const CableType({
     required this.name,
@@ -72,6 +87,7 @@ class CableType {
     required this.end2Type,
     required this.end2Gender,
     required this.color,
+    this.isCustom = false,
   });
 }
 
@@ -96,7 +112,7 @@ class Cable {
 // Constants & Presets
 // ----------------------------------------------------
 
-final List<CableType> availableCables = [
+List<CableType> availableCables = [
   const CableType(
     name: 'HDMI to HDMI',
     end1Type: PortType.hdmi,
@@ -158,6 +174,7 @@ class WorkspaceScreen extends StatefulWidget {
 class _WorkspaceScreenState extends State<WorkspaceScreen> {
   final List<DeviceNode> nodes = [];
   final List<Cable> cables = [];
+  final List<DeviceTemplate> customDevices = [];
 
   // Dragging state for cables
   String? draggingCableId;
@@ -297,6 +314,337 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     });
   }
 
+  void _addDeviceFromTemplate(DeviceTemplate template) {
+    setState(() {
+      nodes.add(
+        DeviceNode(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          name: template.name,
+          position: const Offset(100, 100),
+          ports: template.ports.map((p) => DevicePort(
+            id: DateTime.now().microsecondsSinceEpoch.toString() + p.id,
+            type: p.type,
+            gender: p.gender,
+            relativeCenter: p.relativeCenter,
+          )).toList(),
+          templateId: template.id,
+        ),
+      );
+    });
+  }
+
+  void _editDeviceTemplate(DeviceTemplate tpl) {
+    if (nodes.any((n) => n.templateId == tpl.id)) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please delete all instances of this device from the canvas before editing/deleting.')),
+      );
+      return;
+    }
+    _showCustomDeviceDialog(editingTemplate: tpl);
+  }
+
+  void _editCableType(CableType type) {
+    if (cables.any((c) => c.type == type)) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please delete all instances of this cable from the canvas before editing/deleting.')),
+      );
+      return;
+    }
+    _showCustomCableDialog(editingType: type);
+  }
+
+  Future<DevicePort?> _showAddPortDialog() async {
+    PortType selectedType = PortType.hdmi;
+    PortGender selectedGender = PortGender.female;
+    
+    return showDialog<DevicePort>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Add Port'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      const Text('Type: '),
+                      const SizedBox(width: 8),
+                      DropdownButton<PortType>(
+                        value: selectedType,
+                        items: PortType.values.map((t) => DropdownMenuItem(value: t, child: Text(t.name))).toList(),
+                        onChanged: (val) => setDialogState(() => selectedType = val!),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      const Text('Gender: '),
+                      const SizedBox(width: 8),
+                      DropdownButton<PortGender>(
+                        value: selectedGender,
+                        items: PortGender.values.map((g) => DropdownMenuItem(value: g, child: Text(g.name))).toList(),
+                        onChanged: (val) => setDialogState(() => selectedGender = val!),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context, DevicePort(
+                      id: DateTime.now().millisecondsSinceEpoch.toString(),
+                      type: selectedType,
+                      gender: selectedGender,
+                      relativeCenter: Offset.zero,
+                    ));
+                  },
+                  child: const Text('Add'),
+                ),
+              ],
+            );
+          }
+        );
+      }
+    );
+  }
+
+  Future<void> _showCustomDeviceDialog({DeviceTemplate? editingTemplate}) async {
+    String name = editingTemplate?.name ?? '';
+    List<DevicePort> ports = editingTemplate != null 
+      ? editingTemplate.ports.map((p) => DevicePort(id: p.id, type: p.type, gender: p.gender, relativeCenter: p.relativeCenter)).toList() 
+      : [];
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(editingTemplate != null ? 'Edit Custom Device' : 'Create Custom Device'),
+              content: SizedBox(
+                width: 400,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: TextEditingController(text: name),
+                      decoration: const InputDecoration(labelText: 'Device Name (e.g., Target PC)'),
+                      onChanged: (val) => name = val,
+                    ),
+                    const SizedBox(height: 16),
+                    const Align(alignment: Alignment.centerLeft, child: Text('Ports:', style: TextStyle(fontWeight: FontWeight.bold))),
+                    ...ports.asMap().entries.map((entry) {
+                      final idx = entry.key;
+                      final port = entry.value;
+                      return ListTile(
+                        dense: true,
+                        title: Text('${port.type.name} (${port.gender.name})'),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete, size: 20),
+                          onPressed: () => setDialogState(() => ports.removeAt(idx)),
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 8),
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        final newPort = await _showAddPortDialog();
+                        if (newPort != null) setDialogState(() => ports.add(newPort));
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add Port'),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                if (editingTemplate != null)
+                  TextButton(
+                    onPressed: () {
+                      setState(() => customDevices.removeWhere((tpl) => tpl.id == editingTemplate.id));
+                      Navigator.pop(context);
+                    },
+                    style: TextButton.styleFrom(foregroundColor: Colors.red),
+                    child: const Text('Delete'),
+                  ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final finalName = name.trim().isEmpty ? 'Custom Device' : name.trim();
+                    final List<DevicePort> finalPorts = [];
+                    for (int i = 0; i < ports.length; i++) {
+                      finalPorts.add(DevicePort(
+                        id: ports[i].id,
+                        type: ports[i].type,
+                        gender: ports[i].gender,
+                        relativeCenter: Offset(i % 2 == 0 ? 0 : 140, 50.0 + (i ~/ 2) * 50.0),
+                      ));
+                    }
+                    setState(() {
+                      if (editingTemplate != null) {
+                        final idx = customDevices.indexWhere((t) => t.id == editingTemplate.id);
+                        if (idx != -1) customDevices[idx] = DeviceTemplate(id: editingTemplate.id, name: finalName, ports: finalPorts);
+                      } else {
+                        customDevices.add(DeviceTemplate(
+                          id: DateTime.now().millisecondsSinceEpoch.toString(),
+                          name: finalName,
+                          ports: finalPorts,
+                        ));
+                      }
+                    });
+                    Navigator.pop(context);
+                  },
+                  child: Text(editingTemplate != null ? 'Save' : 'Create'),
+                ),
+              ],
+            );
+          }
+        );
+      }
+    );
+  }
+
+  Future<void> _showCustomCableDialog({CableType? editingType}) async {
+    String name = editingType?.name ?? '';
+    PortType end1Type = editingType?.end1Type ?? PortType.hdmi;
+    PortGender end1Gender = editingType?.end1Gender ?? PortGender.male;
+    PortType end2Type = editingType?.end2Type ?? PortType.hdmi;
+    PortGender end2Gender = editingType?.end2Gender ?? PortGender.male;
+    Color selectedColor = editingType?.color ?? Colors.black;
+
+    final colors = [
+      Colors.black, Colors.white, Colors.blue, Colors.red,
+      Colors.green, Colors.orange, Colors.purple, Colors.grey
+    ];
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(editingType != null ? 'Edit Custom Cable' : 'Create Custom Cable'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: TextEditingController(text: name),
+                      decoration: const InputDecoration(labelText: 'Cable Name (e.g., Custom USB)'),
+                      onChanged: (val) => name = val,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('End 1:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Row(
+                      children: [
+                        DropdownButton<PortType>(
+                          value: end1Type,
+                          items: PortType.values.map((t) => DropdownMenuItem(value: t, child: Text(t.name))).toList(),
+                          onChanged: (val) => setDialogState(() => end1Type = val!),
+                        ),
+                        const SizedBox(width: 16),
+                        DropdownButton<PortGender>(
+                          value: end1Gender,
+                          items: PortGender.values.map((g) => DropdownMenuItem(value: g, child: Text(g.name))).toList(),
+                          onChanged: (val) => setDialogState(() => end1Gender = val!),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('End 2:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Row(
+                      children: [
+                        DropdownButton<PortType>(
+                          value: end2Type,
+                          items: PortType.values.map((t) => DropdownMenuItem(value: t, child: Text(t.name))).toList(),
+                          onChanged: (val) => setDialogState(() => end2Type = val!),
+                        ),
+                        const SizedBox(width: 16),
+                        DropdownButton<PortGender>(
+                          value: end2Gender,
+                          items: PortGender.values.map((g) => DropdownMenuItem(value: g, child: Text(g.name))).toList(),
+                          onChanged: (val) => setDialogState(() => end2Gender = val!),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Color:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: colors.map((c) => GestureDetector(
+                        onTap: () => setDialogState(() => selectedColor = c),
+                        child: Container(
+                          width: 32, height: 32,
+                          decoration: BoxDecoration(
+                            color: c,
+                            shape: BoxShape.circle,
+                            border: selectedColor == c ? Border.all(color: Colors.blueAccent, width: 3) : Border.all(color: Colors.grey.shade400, width: 1),
+                          ),
+                        ),
+                      )).toList(),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                if (editingType != null)
+                  TextButton(
+                    onPressed: () {
+                      setState(() => availableCables.remove(editingType));
+                      Navigator.pop(context);
+                    },
+                    style: TextButton.styleFrom(foregroundColor: Colors.red),
+                    child: const Text('Delete'),
+                  ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final finalName = name.trim().isEmpty ? 'Custom Cable' : name.trim();
+                    setState(() {
+                      final newCableType = CableType(
+                        name: finalName,
+                        end1Type: end1Type,
+                        end1Gender: end1Gender,
+                        end2Type: end2Type,
+                        end2Gender: end2Gender,
+                        color: selectedColor,
+                        isCustom: true,
+                      );
+                      if (editingType != null) {
+                        final idx = availableCables.indexOf(editingType);
+                        if (idx != -1) availableCables[idx] = newCableType;
+                      } else {
+                        availableCables.add(newCableType);
+                      }
+                    });
+                    Navigator.pop(context);
+                  },
+                  child: Text(editingType != null ? 'Save' : 'Create'),
+                ),
+              ],
+            );
+          }
+        );
+      }
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -360,6 +708,13 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                   Icons.hub,
                   () => _addDevice('USB Hub'),
                 ),
+                ...customDevices.map((tpl) => _buildDeviceTemplateButton(tpl)),
+                const SizedBox(height: 8),
+                _buildSidebarButton(
+                  'Create Custom Device',
+                  Icons.add_box,
+                  _showCustomDeviceDialog,
+                ),
                 const Divider(height: 48),
                 const Text(
                   'Cables',
@@ -371,6 +726,12 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                 ),
                 const SizedBox(height: 16),
                 ...availableCables.map((type) => _buildCableButton(type)),
+                const SizedBox(height: 8),
+                _buildSidebarButton(
+                  'Create Custom Cable',
+                  Icons.add_circle_outline,
+                  _showCustomCableDialog,
+                ),
               ],
             ),
           ),
@@ -502,36 +863,85 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     );
   }
 
-  Widget _buildCableButton(CableType type) {
+  Widget _buildDeviceTemplateButton(DeviceTemplate tpl) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: ElevatedButton(
-        onPressed: () => _addCable(type),
-        style: ElevatedButton.styleFrom(
-          alignment: Alignment.centerLeft,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black87,
-          elevation: 2,
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 12,
-              height: 12,
-              decoration: BoxDecoration(
-                color: type.color,
-                shape: BoxShape.circle,
+      child: Row(
+        children: [
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () => _addDeviceFromTemplate(tpl),
+              icon: const Icon(Icons.devices_other, size: 20),
+              label: Text(tpl.name),
+              style: ElevatedButton.styleFrom(
+                alignment: Alignment.centerLeft,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.blueGrey,
+                elevation: 2,
               ),
             ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.settings, color: Colors.blueGrey),
+            onPressed: () => _editDeviceTemplate(tpl),
+            tooltip: 'Edit Custom Device',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCableButton(CableType type) {
+    final btn = ElevatedButton(
+      onPressed: () => _addCable(type),
+      style: ElevatedButton.styleFrom(
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
+        elevation: 2,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: type.color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(type.name, style: const TextStyle(fontSize: 13)),
+          ),
+        ],
+      ),
+    );
+
+    if (type.isCustom) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Row(
+          children: [
+            Expanded(child: btn),
             const SizedBox(width: 8),
-            Expanded(
-              child: Text(type.name, style: const TextStyle(fontSize: 13)),
+            IconButton(
+              icon: const Icon(Icons.settings, color: Colors.blueGrey),
+              onPressed: () => _editCableType(type),
+              tooltip: 'Edit Custom Cable',
             ),
           ],
         ),
-      ),
-    );
+      );
+    } else {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: btn,
+      );
+    }
   }
 
   Widget _buildPortWidget(DeviceNode node, DevicePort port) {
