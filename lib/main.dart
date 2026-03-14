@@ -184,6 +184,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   String? selectedNodeId;
   String? selectedCableId;
 
+  // Sidebar state
+  bool isSidebarOpen = true;
+
   void _addDevice(String name) {
     List<DevicePort> presetPorts = [];
     if (name == 'PC') {
@@ -655,6 +658,15 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         ),
         backgroundColor: Theme.of(context).colorScheme.primary,
         elevation: 0,
+        leading: IconButton(
+          icon: Icon(isSidebarOpen ? Icons.menu_open : Icons.menu, color: Colors.white),
+          tooltip: 'Toggle Sidebar',
+          onPressed: () {
+            setState(() {
+              isSidebarOpen = !isSidebarOpen;
+            });
+          },
+        ),
         actions: [
           if (selectedNodeId != null || selectedCableId != null)
             IconButton(
@@ -675,64 +687,74 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       body: Row(
         children: [
           // Sidebar
-          Container(
-            width: 250,
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            width: isSidebarOpen ? 250 : 0,
             decoration: BoxDecoration(
               color: Colors.grey[100],
               border: Border(right: BorderSide(color: Colors.grey[300]!)),
             ),
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                const Text(
-                  'Devices',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+            child: SingleChildScrollView(
+              child: SizedBox(
+                width: 250,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'Devices',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildSidebarButton(
+                        'Add PC',
+                        Icons.computer,
+                        () => _addDevice('PC'),
+                      ),
+                      _buildSidebarButton(
+                        'Add Monitor',
+                        Icons.monitor,
+                        () => _addDevice('Monitor'),
+                      ),
+                      _buildSidebarButton(
+                        'Add USB Hub',
+                        Icons.hub,
+                        () => _addDevice('USB Hub'),
+                      ),
+                      ...customDevices.map((tpl) => _buildDeviceTemplateButton(tpl)),
+                      const SizedBox(height: 8),
+                      _buildSidebarButton(
+                        'Create Custom Device',
+                        Icons.add_box,
+                        _showCustomDeviceDialog,
+                      ),
+                      const Divider(height: 48),
+                      const Text(
+                        'Cables',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ...availableCables.map((type) => _buildCableButton(type)),
+                      const SizedBox(height: 8),
+                      _buildSidebarButton(
+                        'Create Custom Cable',
+                        Icons.add_circle_outline,
+                        _showCustomCableDialog,
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                _buildSidebarButton(
-                  'Add PC',
-                  Icons.computer,
-                  () => _addDevice('PC'),
-                ),
-                _buildSidebarButton(
-                  'Add Monitor',
-                  Icons.monitor,
-                  () => _addDevice('Monitor'),
-                ),
-                _buildSidebarButton(
-                  'Add USB Hub',
-                  Icons.hub,
-                  () => _addDevice('USB Hub'),
-                ),
-                ...customDevices.map((tpl) => _buildDeviceTemplateButton(tpl)),
-                const SizedBox(height: 8),
-                _buildSidebarButton(
-                  'Create Custom Device',
-                  Icons.add_box,
-                  _showCustomDeviceDialog,
-                ),
-                const Divider(height: 48),
-                const Text(
-                  'Cables',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ...availableCables.map((type) => _buildCableButton(type)),
-                const SizedBox(height: 8),
-                _buildSidebarButton(
-                  'Create Custom Cable',
-                  Icons.add_circle_outline,
-                  _showCustomCableDialog,
-                ),
-              ],
+              ),
             ),
           ),
           // Canvas
