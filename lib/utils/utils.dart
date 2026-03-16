@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+export 'storage_service.dart';
 import '../models/models.dart';
 
 Color getColorForPortType(PortType type) {

@@ -26,6 +26,89 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   // Sidebar state
   bool isSidebarOpen = true;
 
+  final StorageService _storageService = StorageService();
+  String currentWorkspace = 'Workspace A';
+  final List<String> availableWorkspaces = ['Workspace A', 'Workspace B'];
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Load default workspace on start
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadSelectedWorkspace(currentWorkspace);
+    });
+  }
+
+  Future<void> _saveCurrentWorkspace() async {
+    setState(() => _isSaving = true);
+    final customCableTypes = availableCables.where((c) => c.isCustom).toList();
+    await _storageService.saveWorkspace(
+      fileName: currentWorkspace,
+      devices: nodes,
+      cables: cables,
+      customTemplates: customDevices,
+      customCableTypes: customCableTypes,
+    );
+    // Mimic processing time for smooth animation if it's too fast
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (mounted) setState(() => _isSaving = false);
+  }
+
+  Future<void> _loadSelectedWorkspace(String name) async {
+    final data = await _storageService.loadWorkspace(name);
+    if (data != null && mounted) {
+      setState(() {
+        nodes.clear();
+        nodes.addAll(data['devices'] as List<DeviceNode>);
+        cables.clear();
+        cables.addAll(data['cables'] as List<Cable>);
+
+        customDevices.clear();
+        if (data['customTemplates'] != null) {
+          customDevices.addAll(data['customTemplates'] as List<DeviceTemplate>);
+        }
+
+        if (data['customCableTypes'] != null) {
+          final loadedCustoms = data['customCableTypes'] as List<CableType>;
+          availableCables.removeWhere((c) => c.isCustom);
+          availableCables.addAll(loadedCustoms);
+        }
+
+        selectedNodeId = null;
+        selectedCableId = null;
+      });
+    } else {
+      // If it doesn't exist yet, just clear the current view to start fresh
+      setState(() {
+        nodes.clear();
+        cables.clear();
+        selectedNodeId = null;
+        selectedCableId = null;
+      });
+    }
+  }
+
+  Future<void> _switchWorkspace(String newName) async {
+    if (currentWorkspace == newName) return;
+
+    // Show loading or just do it
+    await _saveCurrentWorkspace();
+    setState(() {
+      currentWorkspace = newName;
+    });
+    await _loadSelectedWorkspace(newName);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Switched to $newName'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    }
+  }
+
   void _addDevice(String name) {
     List<DevicePort> presetPorts = [];
     if (name == 'PC') {
@@ -677,6 +760,58 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                 }
               },
             ),
+          Theme(
+            data: Theme.of(context).copyWith(
+              canvasColor: Theme.of(context).colorScheme.primary,
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: currentWorkspace,
+                icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+                onChanged: (String? newValue) {
+                  if (newValue != null) {
+                    _switchWorkspace(newValue);
+                  }
+                },
+                items: availableWorkspaces.map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+          TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 1.0, end: _isSaving ? 0.8 : 1.0),
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOutBack,
+            builder: (context, scale, child) {
+              return Transform.scale(
+                scale: scale,
+                child: IconButton(
+                  icon: _isSaving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.save, color: Colors.white),
+                  tooltip: 'Manual Save',
+                  onPressed: _isSaving ? null : _saveCurrentWorkspace,
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 12),
         ],
       ),
       body: Row(

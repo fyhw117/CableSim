@@ -16,6 +16,24 @@ class DevicePort {
     required this.gender,
     required this.relativeCenter,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'type': type.index,
+      'gender': gender.index,
+      'relativeCenter': {'dx': relativeCenter.dx, 'dy': relativeCenter.dy},
+    };
+  }
+
+  factory DevicePort.fromMap(Map<String, dynamic> map) {
+    return DevicePort(
+      id: map['id'],
+      type: PortType.values[map['type']],
+      gender: PortGender.values[map['gender']],
+      relativeCenter: Offset(map['relativeCenter']['dx'], map['relativeCenter']['dy']),
+    );
+  }
 }
 
 class DeviceTemplate {
@@ -24,6 +42,22 @@ class DeviceTemplate {
   final List<DevicePort> ports;
 
   DeviceTemplate({required this.id, required this.name, required this.ports});
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'ports': ports.map((p) => p.toMap()).toList(),
+    };
+  }
+
+  factory DeviceTemplate.fromMap(Map<String, dynamic> map) {
+    return DeviceTemplate(
+      id: map['id'],
+      name: map['name'],
+      ports: (map['ports'] as List).map((p) => DevicePort.fromMap(p)).toList(),
+    );
+  }
 }
 
 class DeviceNode {
@@ -40,6 +74,26 @@ class DeviceNode {
     required this.ports,
     this.templateId,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'position': {'dx': position.dx, 'dy': position.dy},
+      'ports': ports.map((p) => p.toMap()).toList(),
+      'templateId': templateId,
+    };
+  }
+
+  factory DeviceNode.fromMap(Map<String, dynamic> map) {
+    return DeviceNode(
+      id: map['id'],
+      name: map['name'],
+      position: Offset(map['position']['dx'], map['position']['dy']),
+      ports: (map['ports'] as List).map((p) => DevicePort.fromMap(p)).toList(),
+      templateId: map['templateId'],
+    );
+  }
 }
 
 class CableType {
@@ -60,6 +114,30 @@ class CableType {
     required this.color,
     this.isCustom = false,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'end1Type': end1Type.index,
+      'end1Gender': end1Gender.index,
+      'end2Type': end2Type.index,
+      'end2Gender': end2Gender.index,
+      'color': color.toARGB32(),
+      'isCustom': isCustom,
+    };
+  }
+
+  factory CableType.fromMap(Map<String, dynamic> map) {
+    return CableType(
+      name: map['name'],
+      end1Type: PortType.values[map['end1Type']],
+      end1Gender: PortGender.values[map['end1Gender']],
+      end2Type: PortType.values[map['end2Type']],
+      end2Gender: PortGender.values[map['end2Gender']],
+      color: Color(map['color']),
+      isCustom: map['isCustom'] ?? false,
+    );
+  }
 }
 
 class Cable {
@@ -77,6 +155,33 @@ class Cable {
   Offset? dragPos2; // Position when not connected
 
   Cable({required this.id, required this.type, this.dragPos1, this.dragPos2});
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'type': type.toMap(),
+      'fromNodeId': fromNodeId,
+      'fromPortId': fromPortId,
+      'dragPos1': dragPos1 != null ? {'dx': dragPos1!.dx, 'dy': dragPos1!.dy} : null,
+      'toNodeId': toNodeId,
+      'toPortId': toPortId,
+      'dragPos2': dragPos2 != null ? {'dx': dragPos2!.dx, 'dy': dragPos2!.dy} : null,
+    };
+  }
+
+  factory Cable.fromMap(Map<String, dynamic> map) {
+    final cable = Cable(
+      id: map['id'],
+      type: CableType.fromMap(map['type']),
+      dragPos1: map['dragPos1'] != null ? Offset(map['dragPos1']['dx'], map['dragPos1']['dy']) : null,
+      dragPos2: map['dragPos2'] != null ? Offset(map['dragPos2']['dx'], map['dragPos2']['dy']) : null,
+    );
+    cable.fromNodeId = map['fromNodeId'];
+    cable.fromPortId = map['fromPortId'];
+    cable.toNodeId = map['toNodeId'];
+    cable.toPortId = map['toPortId'];
+    return cable;
+  }
 }
 
 // ----------------------------------------------------
