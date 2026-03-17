@@ -882,7 +882,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        ...availableCables.map((type) => _buildCableButton(type)),
+                        ...availableCables.map(
+                          (type) => _buildCableButton(type),
+                        ),
                         const SizedBox(height: 8),
                         _buildSidebarButton(
                           'Create Custom Cable',
