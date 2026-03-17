@@ -44,33 +44,20 @@ class CablePainter extends CustomPainter {
         endPos = cable.dragPos2 ?? const Offset(0, 0);
       }
 
-      // Draw curved line
-      final path = Path();
-      path.moveTo(startPos.dx, startPos.dy);
-
-      final dx = (endPos.dx - startPos.dx).abs();
-      // Ensure there's always a bit of curve even for vertical lines
-      final controlOffset = dx * 0.5 + 40.0;
-
-      path.cubicTo(
-        startPos.dx + controlOffset,
-        startPos.dy,
-        endPos.dx - controlOffset,
-        endPos.dy,
-        endPos.dx,
-        endPos.dy,
-      );
-
       // Add a slight shadow to make cables pop
-      canvas.drawPath(
-        path,
+      canvas.drawLine(
+        startPos,
+        endPos,
         Paint()
           ..color = Colors.black26
-          ..strokeWidth = 8
+          ..strokeWidth = isSelected ? 10 : 8
           ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
       );
-      canvas.drawPath(path, paint);
+
+      // Draw straight line
+      canvas.drawLine(startPos, endPos, paint);
     }
   }
 

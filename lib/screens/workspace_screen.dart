@@ -481,7 +481,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                           id: ports[i].id,
                           type: ports[i].type,
                           gender: ports[i].gender,
-                          // No longer strictly need fixed relativeCenter for grid, 
+                          // No longer strictly need fixed relativeCenter for grid,
                           // but keeping it for compatibility with old saves if needed.
                           relativeCenter: Offset.zero,
                         ),
@@ -760,9 +760,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
               },
             ),
           Theme(
-            data: Theme.of(context).copyWith(
-              canvasColor: Theme.of(context).colorScheme.primary,
-            ),
+            data: Theme.of(
+              context,
+            ).copyWith(canvasColor: Theme.of(context).colorScheme.primary),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
                 value: currentWorkspace,
@@ -777,7 +777,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                     _switchWorkspace(newValue);
                   }
                 },
-                items: availableWorkspaces.map<DropdownMenuItem<String>>((String value) {
+                items: availableWorkspaces.map<DropdownMenuItem<String>>((
+                  String value,
+                ) {
                   return DropdownMenuItem<String>(
                     value: value,
                     child: Text(value),
@@ -820,69 +822,75 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
             width: isSidebarOpen ? 250 : 0,
+            clipBehavior: Clip.hardEdge,
             decoration: BoxDecoration(
               color: Colors.grey[100],
               border: Border(right: BorderSide(color: Colors.grey[300]!)),
             ),
-            child: SingleChildScrollView(
-              child: SizedBox(
-                width: 250,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Text(
-                        'Devices',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+            child: OverflowBox(
+              alignment: Alignment.topLeft,
+              minWidth: 250,
+              maxWidth: 250,
+              child: SingleChildScrollView(
+                child: SizedBox(
+                  width: 250,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Text(
+                          'Devices',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildSidebarButton(
-                        'Add PC',
-                        Icons.computer,
-                        () => _addDevice('PC'),
-                      ),
-                      _buildSidebarButton(
-                        'Add Monitor',
-                        Icons.monitor,
-                        () => _addDevice('Monitor'),
-                      ),
-                      _buildSidebarButton(
-                        'Add USB Hub',
-                        Icons.hub,
-                        () => _addDevice('USB Hub'),
-                      ),
-                      ...customDevices.map(
-                        (tpl) => _buildDeviceTemplateButton(tpl),
-                      ),
-                      const SizedBox(height: 8),
-                      _buildSidebarButton(
-                        'Create Custom Device',
-                        Icons.add_box,
-                        _showCustomDeviceDialog,
-                      ),
-                      const Divider(height: 48),
-                      const Text(
-                        'Cables',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                        const SizedBox(height: 16),
+                        _buildSidebarButton(
+                          'Add PC',
+                          Icons.computer,
+                          () => _addDevice('PC'),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      ...availableCables.map((type) => _buildCableButton(type)),
-                      const SizedBox(height: 8),
-                      _buildSidebarButton(
-                        'Create Custom Cable',
-                        Icons.add_circle_outline,
-                        _showCustomCableDialog,
-                      ),
-                    ],
+                        _buildSidebarButton(
+                          'Add Monitor',
+                          Icons.monitor,
+                          () => _addDevice('Monitor'),
+                        ),
+                        _buildSidebarButton(
+                          'Add USB Hub',
+                          Icons.hub,
+                          () => _addDevice('USB Hub'),
+                        ),
+                        ...customDevices.map(
+                          (tpl) => _buildDeviceTemplateButton(tpl),
+                        ),
+                        const SizedBox(height: 8),
+                        _buildSidebarButton(
+                          'Create Custom Device',
+                          Icons.add_box,
+                          _showCustomDeviceDialog,
+                        ),
+                        const Divider(height: 48),
+                        const Text(
+                          'Cables',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ...availableCables.map((type) => _buildCableButton(type)),
+                        const SizedBox(height: 8),
+                        _buildSidebarButton(
+                          'Create Custom Cable',
+                          Icons.add_circle_outline,
+                          _showCustomCableDialog,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -932,21 +940,24 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                     )..layout(maxWidth: minWidth - (sidePadding * 2));
 
                     double textHeight = textPainter.height;
-                    double topPadding = 12.0 + textHeight + 8.0; // Margin + Text + Gap
+                    double topPadding =
+                        12.0 + textHeight + 8.0; // Margin + Text + Gap
 
                     // Calculate rows needed
                     int rowsNeeded = (node.ports.length / columns).ceil();
                     if (rowsNeeded < 1) rowsNeeded = 1;
 
                     // Dynamic sizing
-                    double nodeWidth = (columns * portCellWidth) + (sidePadding * 2);
+                    double nodeWidth =
+                        (columns * portCellWidth) + (sidePadding * 2);
                     if (nodeWidth < minWidth) nodeWidth = minWidth;
 
-                    double nodeHeight = topPadding + (rowsNeeded * portCellHeight) + 10.0;
+                    double nodeHeight =
+                        topPadding + (rowsNeeded * portCellHeight) + 10.0;
                     if (nodeHeight < minHeight) nodeHeight = minHeight;
 
                     // Pre-calculate port positions to be used by CablePainter as well
-                    // Note: In a real app, you might store these in the node object 
+                    // Note: In a real app, you might store these in the node object
                     // or use a helper to ensure they are consistent.
                     for (int i = 0; i < node.ports.length; i++) {
                       int row = i ~/ columns;
@@ -957,8 +968,12 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                         type: node.ports[i].type,
                         gender: node.ports[i].gender,
                         relativeCenter: Offset(
-                          sidePadding + (col * portCellWidth) + (portCellWidth / 2),
-                          topPadding + (row * portCellHeight) + (portCellHeight / 2),
+                          sidePadding +
+                              (col * portCellWidth) +
+                              (portCellWidth / 2),
+                          topPadding +
+                              (row * portCellHeight) +
+                              (portCellHeight / 2),
                         ),
                       );
                     }
@@ -1008,7 +1023,11 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                               Align(
                                 alignment: Alignment.topCenter,
                                 child: Padding(
-                                  padding: const EdgeInsets.only(top: 12, left: 8, right: 8),
+                                  padding: const EdgeInsets.only(
+                                    top: 12,
+                                    left: 8,
+                                    right: 8,
+                                  ),
                                   child: Text(
                                     node.name,
                                     style: const TextStyle(
