@@ -117,25 +117,25 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           id: 'p1',
           type: PortType.typeC,
           gender: PortGender.female,
-          relativeCenter: const Offset(0, 30),
+          relativeCenter: const Offset(0, 20),
         ),
         DevicePort(
           id: 'p2',
           type: PortType.typeA,
           gender: PortGender.female,
-          relativeCenter: const Offset(0, 70),
+          relativeCenter: const Offset(0, 50),
         ),
         DevicePort(
           id: 'p3',
           type: PortType.hdmi,
           gender: PortGender.female,
-          relativeCenter: const Offset(140, 50),
+          relativeCenter: const Offset(100, 35),
         ),
         DevicePort(
           id: 'p4',
           type: PortType.acPower,
           gender: PortGender.male,
-          relativeCenter: const Offset(70, 100),
+          relativeCenter: const Offset(50, 70),
         ),
       ];
     } else if (name == 'Monitor') {
@@ -144,13 +144,13 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           id: 'p1',
           type: PortType.hdmi,
           gender: PortGender.female,
-          relativeCenter: const Offset(0, 50),
+          relativeCenter: const Offset(0, 35),
         ),
         DevicePort(
           id: 'p2',
           type: PortType.acPower,
           gender: PortGender.male,
-          relativeCenter: const Offset(70, 100),
+          relativeCenter: const Offset(50, 70),
         ),
       ];
     } else {
@@ -159,13 +159,13 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           id: 'left',
           type: PortType.typeC,
           gender: PortGender.female,
-          relativeCenter: const Offset(0, 50),
+          relativeCenter: const Offset(0, 35),
         ),
         DevicePort(
           id: 'right',
           type: PortType.typeA,
           gender: PortGender.female,
-          relativeCenter: const Offset(140, 50),
+          relativeCenter: const Offset(100, 35),
         ),
       ];
     }
@@ -481,10 +481,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                           id: ports[i].id,
                           type: ports[i].type,
                           gender: ports[i].gender,
-                          relativeCenter: Offset(
-                            i % 2 == 0 ? 0 : 140,
-                            50.0 + (i ~/ 2) * 50.0,
-                          ),
+                          // No longer strictly need fixed relativeCenter for grid, 
+                          // but keeping it for compatibility with old saves if needed.
+                          relativeCenter: Offset.zero,
                         ),
                       );
                     }
@@ -911,6 +910,59 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
 
                   // Devices Layer
                   ...nodes.map((node) {
+                    // Constants for Grid Layout
+                    const double minWidth = 100.0;
+                    const double minHeight = 70.0;
+                    const double portCellWidth = 28.0;
+                    const double portCellHeight = 25.0;
+                    const int columns = 3;
+                    const double sidePadding = 8.0;
+
+                    // Calculate text height dynamically
+                    final textPainter = TextPainter(
+                      text: TextSpan(
+                        text: node.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      textDirection: TextDirection.ltr,
+                      textAlign: TextAlign.center,
+                    )..layout(maxWidth: minWidth - (sidePadding * 2));
+
+                    double textHeight = textPainter.height;
+                    double topPadding = 12.0 + textHeight + 8.0; // Margin + Text + Gap
+
+                    // Calculate rows needed
+                    int rowsNeeded = (node.ports.length / columns).ceil();
+                    if (rowsNeeded < 1) rowsNeeded = 1;
+
+                    // Dynamic sizing
+                    double nodeWidth = (columns * portCellWidth) + (sidePadding * 2);
+                    if (nodeWidth < minWidth) nodeWidth = minWidth;
+
+                    double nodeHeight = topPadding + (rowsNeeded * portCellHeight) + 10.0;
+                    if (nodeHeight < minHeight) nodeHeight = minHeight;
+
+                    // Pre-calculate port positions to be used by CablePainter as well
+                    // Note: In a real app, you might store these in the node object 
+                    // or use a helper to ensure they are consistent.
+                    for (int i = 0; i < node.ports.length; i++) {
+                      int row = i ~/ columns;
+                      int col = i % columns;
+                      // Overwrite relativeCenter with grid-calculated position
+                      node.ports[i] = DevicePort(
+                        id: node.ports[i].id,
+                        type: node.ports[i].type,
+                        gender: node.ports[i].gender,
+                        relativeCenter: Offset(
+                          sidePadding + (col * portCellWidth) + (portCellWidth / 2),
+                          topPadding + (row * portCellHeight) + (portCellHeight / 2),
+                        ),
+                      );
+                    }
+
                     return Positioned(
                       left: node.position.dx,
                       top: node.position.dy,
@@ -927,8 +979,8 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                           });
                         },
                         child: Container(
-                          width: 140,
-                          height: 100,
+                          width: nodeWidth,
+                          height: nodeHeight,
                           decoration: BoxDecoration(
                             color: selectedNodeId == node.id
                                 ? Colors.blue.shade50
@@ -953,11 +1005,17 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                           child: Stack(
                             clipBehavior: Clip.none,
                             children: [
-                              Center(
-                                child: Text(
-                                  node.name,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
+                              Align(
+                                alignment: Alignment.topCenter,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(top: 12, left: 8, right: 8),
+                                  child: Text(
+                                    node.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                    textAlign: TextAlign.center,
                                   ),
                                 ),
                               ),
@@ -1105,8 +1163,8 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       child: Tooltip(
         message: '${port.type.name} (${port.gender.name})',
         child: Container(
-          width: 32,
-          height: 24,
+          width: 24,
+          height: 18,
           decoration: BoxDecoration(
             color: getColorForPortType(port.type).withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(4),
@@ -1117,8 +1175,8 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           ),
           child: Center(
             child: SizedBox(
-              width: 24,
-              height: 16,
+              width: 18,
+              height: 12,
               child: CustomPaint(
                 painter: PortShapePainter(
                   type: port.type,
@@ -1227,8 +1285,8 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           child: Tooltip(
             message: 'Drag to connect / Click to select',
             child: Container(
-              width: 36,
-              height: 28,
+              width: 28,
+              height: 22,
               decoration: BoxDecoration(
                 color: isConnected ? Colors.lightGreen.shade50 : Colors.white,
                 borderRadius: BorderRadius.circular(6),
@@ -1263,8 +1321,8 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
               ),
               child: Center(
                 child: SizedBox(
-                  width: 24,
-                  height: 16,
+                  width: 18,
+                  height: 12,
                   child: CustomPaint(
                     painter: PortShapePainter(
                       type: cableType,
@@ -1284,7 +1342,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   void _handleEndpointDrop(Cable cable, int endpointIndex, Offset currentPos) {
     DevicePort? targetPort;
     DeviceNode? targetNode;
-    double minDistance = 40.0;
+    double minDistance = 30.0;
     String? errorMessage;
 
     final cType = endpointIndex == 1
