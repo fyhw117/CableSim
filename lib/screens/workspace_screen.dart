@@ -783,6 +783,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         : cable.type.end2Gender;
 
     final isSelected = selectedCableId == cable.id;
+    final isDragging = draggingCableId == cable.id && draggingEndpoint == endpointIndex;
     return Positioned(
       left: position.dx - 18,
       top: position.dy - 14,
@@ -829,7 +830,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           _handleEndpointDrop(cable, endpointIndex, currentPos);
         },
         child: MouseRegion(
-          cursor: SystemMouseCursors.grab,
+          cursor: isDragging ? SystemMouseCursors.grabbing : SystemMouseCursors.grab,
           child: Tooltip(
             message: 'Drag to connect / Click to select',
             child: Container(
