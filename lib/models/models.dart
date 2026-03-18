@@ -184,41 +184,4 @@ class Cable {
   }
 }
 
-// ----------------------------------------------------
-// Constants & Presets
-// ----------------------------------------------------
 
-List<CableType> availableCables = [
-  const CableType(
-    name: 'HDMI to HDMI',
-    end1Type: PortType.hdmi,
-    end1Gender: PortGender.male,
-    end2Type: PortType.hdmi,
-    end2Gender: PortGender.male,
-    color: Colors.blueGrey,
-  ),
-  const CableType(
-    name: 'Type-C to Type-C',
-    end1Type: PortType.typeC,
-    end1Gender: PortGender.male,
-    end2Type: PortType.typeC,
-    end2Gender: PortGender.male,
-    color: Colors.black87,
-  ),
-  const CableType(
-    name: 'Type-A to Type-C',
-    end1Type: PortType.typeA,
-    end1Gender: PortGender.male,
-    end2Type: PortType.typeC,
-    end2Gender: PortGender.male,
-    color: Colors.grey,
-  ),
-  const CableType(
-    name: 'AC Power Cord',
-    end1Type: PortType.acPower,
-    end1Gender: PortGender.male,
-    end2Type: PortType.acPower,
-    end2Gender: PortGender.female,
-    color: Colors.black,
-  ),
-];

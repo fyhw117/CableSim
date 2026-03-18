@@ -27,8 +27,12 @@ class CablePainter extends CustomPainter {
           cable.fromPortId != null &&
           nodes.any((n) => n.id == cable.fromNodeId)) {
         final node = nodes.firstWhere((n) => n.id == cable.fromNodeId);
-        final port = node.ports.firstWhere((p) => p.id == cable.fromPortId);
-        startPos = node.position + port.relativeCenter;
+        final portIdx = node.ports.indexWhere((p) => p.id == cable.fromPortId);
+        if (portIdx != -1) {
+          startPos = node.position + node.ports[portIdx].relativeCenter;
+        } else {
+          startPos = cable.dragPos1 ?? const Offset(0, 0);
+        }
       } else {
         startPos = cable.dragPos1 ?? const Offset(0, 0);
       }
@@ -38,8 +42,12 @@ class CablePainter extends CustomPainter {
           cable.toPortId != null &&
           nodes.any((n) => n.id == cable.toNodeId)) {
         final node = nodes.firstWhere((n) => n.id == cable.toNodeId);
-        final port = node.ports.firstWhere((p) => p.id == cable.toPortId);
-        endPos = node.position + port.relativeCenter;
+        final portIdx = node.ports.indexWhere((p) => p.id == cable.toPortId);
+        if (portIdx != -1) {
+          endPos = node.position + node.ports[portIdx].relativeCenter;
+        } else {
+          endPos = cable.dragPos2 ?? const Offset(0, 0);
+        }
       } else {
         endPos = cable.dragPos2 ?? const Offset(0, 0);
       }
@@ -63,6 +71,13 @@ class CablePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CablePainter oldDelegate) {
+    // cables/nodes are mutable lists passed by reference, so in-place mutations
+    // (position changes during drag) are invisible to reference equality checks.
+    // We skip repaint only when there's nothing to draw and selection is unchanged.
+    if (cables.isEmpty && oldDelegate.cables.isEmpty &&
+        selectedCableId == oldDelegate.selectedCableId) {
+      return false;
+    }
     return true;
   }
 }

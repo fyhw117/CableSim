@@ -26,6 +26,43 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   // Sidebar state
   bool isSidebarOpen = true;
 
+  // Available cable types. Kept as state (not global) to prevent
+  // cross-instance contamination when custom cables are added/removed.
+  final List<CableType> availableCables = [
+    const CableType(
+      name: 'HDMI to HDMI',
+      end1Type: PortType.hdmi,
+      end1Gender: PortGender.male,
+      end2Type: PortType.hdmi,
+      end2Gender: PortGender.male,
+      color: Colors.blueGrey,
+    ),
+    const CableType(
+      name: 'Type-C to Type-C',
+      end1Type: PortType.typeC,
+      end1Gender: PortGender.male,
+      end2Type: PortType.typeC,
+      end2Gender: PortGender.male,
+      color: Colors.black87,
+    ),
+    const CableType(
+      name: 'Type-A to Type-C',
+      end1Type: PortType.typeA,
+      end1Gender: PortGender.male,
+      end2Type: PortType.typeC,
+      end2Gender: PortGender.male,
+      color: Colors.grey,
+    ),
+    const CableType(
+      name: 'AC Power Cord',
+      end1Type: PortType.acPower,
+      end1Gender: PortGender.male,
+      end2Type: PortType.acPower,
+      end2Gender: PortGender.female,
+      color: Colors.black,
+    ),
+  ];
+
   final StorageService _storageService = StorageService();
   String currentWorkspace = 'Workspace A';
   final List<String> availableWorkspaces = ['Workspace A', 'Workspace B'];
@@ -58,9 +95,14 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   Future<void> _loadSelectedWorkspace(String name) async {
     final data = await _storageService.loadWorkspace(name);
     if (data != null && mounted) {
+      // Recalculate port positions before setState so build() never needs to mutate state.
+      final loadedDevices = data['devices'] as List<DeviceNode>;
+      for (final node in loadedDevices) {
+        _recalculatePortPositions(node);
+      }
       setState(() {
         nodes.clear();
-        nodes.addAll(data['devices'] as List<DeviceNode>);
+        nodes.addAll(loadedDevices);
         cables.clear();
         cables.addAll(data['cables'] as List<Cable>);
 
@@ -170,15 +212,15 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       ];
     }
 
+    final newNode = DeviceNode(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: name,
+      position: const Offset(100, 100),
+      ports: presetPorts,
+    );
+    _recalculatePortPositions(newNode);
     setState(() {
-      nodes.add(
-        DeviceNode(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          name: name,
-          position: const Offset(100, 100),
-          ports: presetPorts,
-        ),
-      );
+      nodes.add(newNode);
     });
   }
 
@@ -242,25 +284,25 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   }
 
   void _addDeviceFromTemplate(DeviceTemplate template) {
+    final newNode = DeviceNode(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: template.name,
+      position: const Offset(100, 100),
+      ports: template.ports
+          .map(
+            (p) => DevicePort(
+              id: DateTime.now().microsecondsSinceEpoch.toString() + p.id,
+              type: p.type,
+              gender: p.gender,
+              relativeCenter: Offset.zero,
+            ),
+          )
+          .toList(),
+      templateId: template.id,
+    );
+    _recalculatePortPositions(newNode);
     setState(() {
-      nodes.add(
-        DeviceNode(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          name: template.name,
-          position: const Offset(100, 100),
-          ports: template.ports
-              .map(
-                (p) => DevicePort(
-                  id: DateTime.now().microsecondsSinceEpoch.toString() + p.id,
-                  type: p.type,
-                  gender: p.gender,
-                  relativeCenter: p.relativeCenter,
-                ),
-              )
-              .toList(),
-          templateId: template.id,
-        ),
-      );
+      nodes.add(newNode);
     });
   }
 
@@ -958,27 +1000,8 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                         topPadding + (rowsNeeded * portCellHeight) + 10.0;
                     if (nodeHeight < minHeight) nodeHeight = minHeight;
 
-                    // Pre-calculate port positions to be used by CablePainter as well
-                    // Note: In a real app, you might store these in the node object
-                    // or use a helper to ensure they are consistent.
-                    for (int i = 0; i < node.ports.length; i++) {
-                      int row = i ~/ columns;
-                      int col = i % columns;
-                      // Overwrite relativeCenter with grid-calculated position
-                      node.ports[i] = DevicePort(
-                        id: node.ports[i].id,
-                        type: node.ports[i].type,
-                        gender: node.ports[i].gender,
-                        relativeCenter: Offset(
-                          sidePadding +
-                              (col * portCellWidth) +
-                              (portCellWidth / 2),
-                          topPadding +
-                              (row * portCellHeight) +
-                              (portCellHeight / 2),
-                        ),
-                      );
-                    }
+                    // Port positions are pre-calculated by _recalculatePortPositions()
+                    // when a node is created or loaded. No mutation in build().
 
                     return Positioned(
                       left: node.position.dx,
@@ -1072,6 +1095,41 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         ],
       ),
     );
+  }
+
+  /// Calculates and stores grid-based port positions for a device node.
+  /// Call this when a node is created or loaded — never inside build().
+  void _recalculatePortPositions(DeviceNode node) {
+    const double minWidth = 100.0;
+    const double portCellWidth = 28.0;
+    const double portCellHeight = 25.0;
+    const int columns = 3;
+    const double sidePadding = 8.0;
+
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: node.name,
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    )..layout(maxWidth: minWidth - (sidePadding * 2));
+
+    final double topPadding = 12.0 + textPainter.height + 8.0;
+
+    for (int i = 0; i < node.ports.length; i++) {
+      final int row = i ~/ columns;
+      final int col = i % columns;
+      node.ports[i] = DevicePort(
+        id: node.ports[i].id,
+        type: node.ports[i].type,
+        gender: node.ports[i].gender,
+        relativeCenter: Offset(
+          sidePadding + (col * portCellWidth) + (portCellWidth / 2),
+          topPadding + (row * portCellHeight) + (portCellHeight / 2),
+        ),
+      );
+    }
   }
 
   Widget _buildSidebarButton(
@@ -1218,10 +1276,19 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       Offset pos1;
       bool isConnected1 = false;
       if (cable.fromNodeId != null && cable.fromPortId != null) {
-        final node = nodes.firstWhere((n) => n.id == cable.fromNodeId);
-        final port = node.ports.firstWhere((p) => p.id == cable.fromPortId);
-        pos1 = node.position + port.relativeCenter;
-        isConnected1 = true;
+        final nodeIdx = nodes.indexWhere((n) => n.id == cable.fromNodeId);
+        if (nodeIdx != -1) {
+          final node = nodes[nodeIdx];
+          final portIdx = node.ports.indexWhere((p) => p.id == cable.fromPortId);
+          if (portIdx != -1) {
+            pos1 = node.position + node.ports[portIdx].relativeCenter;
+            isConnected1 = true;
+          } else {
+            pos1 = cable.dragPos1 ?? const Offset(0, 0);
+          }
+        } else {
+          pos1 = cable.dragPos1 ?? const Offset(0, 0);
+        }
       } else {
         pos1 = cable.dragPos1 ?? const Offset(0, 0);
       }
@@ -1230,10 +1297,19 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       Offset pos2;
       bool isConnected2 = false;
       if (cable.toNodeId != null && cable.toPortId != null) {
-        final node = nodes.firstWhere((n) => n.id == cable.toNodeId);
-        final port = node.ports.firstWhere((p) => p.id == cable.toPortId);
-        pos2 = node.position + port.relativeCenter;
-        isConnected2 = true;
+        final nodeIdx = nodes.indexWhere((n) => n.id == cable.toNodeId);
+        if (nodeIdx != -1) {
+          final node = nodes[nodeIdx];
+          final portIdx = node.ports.indexWhere((p) => p.id == cable.toPortId);
+          if (portIdx != -1) {
+            pos2 = node.position + node.ports[portIdx].relativeCenter;
+            isConnected2 = true;
+          } else {
+            pos2 = cable.dragPos2 ?? const Offset(0, 0);
+          }
+        } else {
+          pos2 = cable.dragPos2 ?? const Offset(0, 0);
+        }
       } else {
         pos2 = cable.dragPos2 ?? const Offset(0, 0);
       }
