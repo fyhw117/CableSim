@@ -368,7 +368,6 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     });
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -730,7 +729,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         final nodeIdx = nodes.indexWhere((n) => n.id == cable.fromNodeId);
         if (nodeIdx != -1) {
           final node = nodes[nodeIdx];
-          final portIdx = node.ports.indexWhere((p) => p.id == cable.fromPortId);
+          final portIdx = node.ports.indexWhere(
+            (p) => p.id == cable.fromPortId,
+          );
           if (portIdx != -1) {
             pos1 = node.position + node.ports[portIdx].relativeCenter;
             isConnected1 = true;
@@ -783,7 +784,8 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         : cable.type.end2Gender;
 
     final isSelected = selectedCableId == cable.id;
-    final isDragging = draggingCableId == cable.id && draggingEndpoint == endpointIndex;
+    final isDragging =
+        draggingCableId == cable.id && draggingEndpoint == endpointIndex;
     return Positioned(
       left: position.dx - 18,
       top: position.dy - 14,
@@ -830,7 +832,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           _handleEndpointDrop(cable, endpointIndex, currentPos);
         },
         child: MouseRegion(
-          cursor: isDragging ? SystemMouseCursors.grabbing : SystemMouseCursors.grab,
+          cursor: isDragging
+              ? SystemMouseCursors.grabbing
+              : SystemMouseCursors.grab,
           child: Tooltip(
             message: 'Drag to connect / Click to select',
             child: Container(
