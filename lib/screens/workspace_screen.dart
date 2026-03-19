@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../utils/utils.dart';
@@ -69,6 +70,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   String currentWorkspace = 'Workspace A';
   final List<String> availableWorkspaces = ['Workspace A', 'Workspace B'];
   bool _isSaving = false;
+  Timer? _saveTimer;
 
   @override
   void initState() {
@@ -79,8 +81,8 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     });
   }
 
-  Future<void> _saveCurrentWorkspace() async {
-    setState(() => _isSaving = true);
+  Future<void> _saveCurrentWorkspace({bool manual = false}) async {
+    if (manual) setState(() => _isSaving = true);
     final customCableTypes = availableCables.where((c) => c.isCustom).toList();
     await _storageService.saveWorkspace(
       fileName: currentWorkspace,
@@ -89,9 +91,28 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       customTemplates: customDevices,
       customCableTypes: customCableTypes,
     );
-    // Mimic processing time for smooth animation if it's too fast
-    await Future.delayed(const Duration(milliseconds: 400));
-    if (mounted) setState(() => _isSaving = false);
+    if (manual) {
+      // Mimic processing time for smooth animation if it's too fast
+      await Future.delayed(const Duration(milliseconds: 400));
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  void _triggerAutoSave({bool immediate = false}) {
+    _saveTimer?.cancel();
+    if (immediate) {
+      _saveCurrentWorkspace();
+    } else {
+      _saveTimer = Timer(const Duration(seconds: 1), () {
+        _saveCurrentWorkspace();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _saveTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadSelectedWorkspace(String name) async {
@@ -127,6 +148,8 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       setState(() {
         nodes.clear();
         cables.clear();
+        customDevices.clear();
+        availableCables.removeWhere((c) => c.isCustom);
         selectedNodeId = null;
         selectedCableId = null;
       });
@@ -137,7 +160,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     if (currentWorkspace == newName) return;
 
     // Show loading or just do it
-    await _saveCurrentWorkspace();
+    await _saveCurrentWorkspace(manual: false);
     setState(() {
       currentWorkspace = newName;
     });
@@ -224,6 +247,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     setState(() {
       nodes.add(newNode);
     });
+    _triggerAutoSave();
   }
 
   void _addCable(CableType type) {
@@ -237,6 +261,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         ),
       );
     });
+    _triggerAutoSave();
   }
 
   bool _canConnect(
@@ -277,12 +302,14 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       }
       nodes.removeWhere((n) => n.id == id);
     });
+    _triggerAutoSave();
   }
 
   void _removeCable(String id) {
     setState(() {
       cables.removeWhere((c) => c.id == id);
     });
+    _triggerAutoSave();
   }
 
   void _addDeviceFromTemplate(DeviceTemplate template) {
@@ -306,18 +333,21 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     setState(() {
       nodes.add(newNode);
     });
+    _triggerAutoSave();
   }
 
   Future<void> _onCreateCustomDevice() async {
     final result = await showCustomDeviceDialog(context);
     if (result == null || result.deleted) return;
     setState(() => customDevices.add(result.template!));
+    _triggerAutoSave(immediate: true);
   }
 
   Future<void> _onCreateCustomCable() async {
     final result = await showCustomCableDialog(context);
     if (result == null || result.deleted) return;
     setState(() => availableCables.add(result.cableType!));
+    _triggerAutoSave(immediate: true);
   }
 
   Future<void> _editDeviceTemplate(DeviceTemplate tpl) async {
@@ -342,6 +372,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         if (idx != -1) customDevices[idx] = result.template!;
       }
     });
+    _triggerAutoSave(immediate: true);
   }
 
   Future<void> _editCableType(CableType type) async {
@@ -366,6 +397,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         if (idx != -1) availableCables[idx] = result.cableType!;
       }
     });
+    _triggerAutoSave(immediate: true);
   }
 
   @override
@@ -453,7 +485,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                         )
                       : const Icon(Icons.save, color: Colors.white),
                   tooltip: 'Manual Save',
-                  onPressed: _isSaving ? null : _saveCurrentWorkspace,
+                  onPressed: _isSaving ? null : () => _saveCurrentWorkspace(manual: true),
                 ),
               );
             },
@@ -568,11 +600,11 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                           setState(() {
                             node.position += details.delta;
                             // Prevent node from going into the sidebar area (dx < 0)
-                            // which would make it lose hit-testing.
                             if (node.position.dx < 0) {
                               node.position = Offset(0, node.position.dy);
                             }
                           });
+                          _triggerAutoSave();
                         },
                         child: Container(
                           width: nodeWidth,
@@ -837,6 +869,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                 }
               }
             });
+            _triggerAutoSave();
           }
         },
         onPanEnd: (details) {
@@ -974,6 +1007,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         draggingCableId = null;
         draggingEndpoint = null;
       });
+      _triggerAutoSave();
     } else {
       if (errorMessage != null) {
         // Clear previous tooltips to avoid stacking the same message repeatedly
@@ -989,6 +1023,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         draggingCableId = null;
         draggingEndpoint = null;
       });
+      _triggerAutoSave();
     }
   }
 }
