@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/models.dart';
+import '../utils/utils.dart';
 
 /// Shows a dialog to choose a port's type and gender.
 /// Returns [DevicePort] if confirmed, or `null` if cancelled.
@@ -11,36 +12,93 @@ Future<DevicePort?> showAddPortDialog(BuildContext context) {
     context: context,
     builder: (context) => StatefulBuilder(
       builder: (context, setDialogState) => AlertDialog(
-        title: const Text('Add Port'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.add_box_outlined, color: Colors.blue),
+            SizedBox(width: 12),
+            Text('Add New Port'),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                const Text('Type: '),
-                const SizedBox(width: 8),
-                DropdownButton<PortType>(
+            const Text(
+              'Port Type',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                border: Border.all(color: Colors.grey[300]!),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<PortType>(
+                  isExpanded: true,
                   value: selectedType,
                   items: PortType.values
-                      .map((t) => DropdownMenuItem(value: t, child: Text(t.name)))
+                      .map(
+                        (t) => DropdownMenuItem(
+                          value: t,
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.circle,
+                                size: 10,
+                                color: getColorForPortType(t),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(t.name.toUpperCase()),
+                            ],
+                          ),
+                        ),
+                      )
                       .toList(),
                   onChanged: (val) => setDialogState(() => selectedType = val!),
                 ),
-              ],
+              ),
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                const Text('Gender: '),
-                const SizedBox(width: 8),
-                DropdownButton<PortGender>(
+            const SizedBox(height: 20),
+            const Text(
+              'Gender',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                border: Border.all(color: Colors.grey[300]!),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<PortGender>(
+                  isExpanded: true,
                   value: selectedGender,
                   items: PortGender.values
-                      .map((g) => DropdownMenuItem(value: g, child: Text(g.name)))
+                      .map(
+                        (g) => DropdownMenuItem(
+                          value: g,
+                          child: Text(g.name.toUpperCase()),
+                        ),
+                      )
                       .toList(),
-                  onChanged: (val) => setDialogState(() => selectedGender = val!),
+                  onChanged:
+                      (val) => setDialogState(() => selectedGender = val!),
                 ),
-              ],
+              ),
             ),
           ],
         ),
@@ -50,6 +108,14 @@ Future<DevicePort?> showAddPortDialog(BuildContext context) {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
             onPressed: () => Navigator.pop(
               context,
               DevicePort(
@@ -59,7 +125,7 @@ Future<DevicePort?> showAddPortDialog(BuildContext context) {
                 relativeCenter: Offset.zero,
               ),
             ),
-            child: const Text('Add'),
+            child: const Text('Add Port'),
           ),
         ],
       ),
@@ -80,53 +146,136 @@ Future<({bool deleted, DeviceTemplate? template})?> showCustomDeviceDialog(
   String name = editingTemplate?.name ?? '';
   final List<DevicePort> ports = editingTemplate != null
       ? editingTemplate.ports
-            .map((p) => DevicePort(
-                  id: p.id,
-                  type: p.type,
-                  gender: p.gender,
-                  relativeCenter: p.relativeCenter,
-                ))
+            .map(
+              (p) => DevicePort(
+                id: p.id,
+                type: p.type,
+                gender: p.gender,
+                relativeCenter: p.relativeCenter,
+              ),
+            )
             .toList()
       : [];
+
+  final nameController = TextEditingController(text: name);
 
   return showDialog<({bool deleted, DeviceTemplate? template})>(
     context: context,
     builder: (context) => StatefulBuilder(
       builder: (context, setDialogState) => AlertDialog(
-        title: Text(editingTemplate != null ? 'Edit Custom Device' : 'Create Custom Device'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          editingTemplate != null
+              ? 'Edit Custom Device'
+              : 'Create Custom Device',
+        ),
         content: SizedBox(
           width: 400,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
-                controller: TextEditingController(text: name),
+                controller: nameController,
                 decoration: const InputDecoration(
                   labelText: 'Device Name (e.g., Target PC)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.devices),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 ),
                 onChanged: (val) => name = val,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
               const Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Ports:', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-              ...ports.asMap().entries.map((entry) => ListTile(
-                    dense: true,
-                    title: Text('${entry.value.type.name} (${entry.value.gender.name})'),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, size: 20),
-                      onPressed: () => setDialogState(() => ports.removeAt(entry.key)),
+                child: Row(
+                  children: [
+                    Icon(Icons.layers, size: 20, color: Colors.blueGrey),
+                    SizedBox(width: 8),
+                    Text(
+                      'Ports:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.blueGrey,
+                      ),
                     ),
-                  )),
+                  ],
+                ),
+              ),
               const SizedBox(height: 8),
-              ElevatedButton.icon(
-                onPressed: () async {
-                  final newPort = await showAddPortDialog(context);
-                  if (newPort != null) setDialogState(() => ports.add(newPort));
-                },
-                icon: const Icon(Icons.add),
-                label: const Text('Add Port'),
+              Flexible(
+                child: Container(
+                  constraints: const BoxConstraints(maxHeight: 300),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: ports.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.all(24.0),
+                          child: Center(
+                            child: Text(
+                              'No ports added yet.',
+                              style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
+                            ),
+                          ),
+                        )
+                      : Scrollbar(
+                          thumbVisibility: true,
+                          child: ListView.separated(
+                            shrinkWrap: true,
+                            itemCount: ports.length,
+                            padding: EdgeInsets.zero,
+                            separatorBuilder: (context, index) => Divider(height: 1, color: Colors.grey[200]),
+                            itemBuilder: (context, index) {
+                              final port = ports[index];
+                              return ListTile(
+                                dense: true,
+                                leading: Container(
+                                  width: 12,
+                                  height: 12,
+                                  decoration: BoxDecoration(
+                                    color: getColorForPortType(port.type),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                title: Text(
+                                  port.type.name,
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                subtitle: Text(
+                                  port.gender.name,
+                                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                                ),
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                                  onPressed: () => setDialogState(() => ports.removeAt(index)),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    final newPort = await showAddPortDialog(context);
+                    if (newPort != null) setDialogState(() => ports.add(newPort));
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Port'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue.shade50,
+                    foregroundColor: Colors.blue.shade800,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    elevation: 0,
+                    side: BorderSide(color: Colors.blue.shade200),
+                  ),
+                ),
               ),
             ],
           ),
@@ -145,15 +294,18 @@ Future<({bool deleted, DeviceTemplate? template})?> showCustomDeviceDialog(
           ),
           ElevatedButton(
             onPressed: () {
-              final finalName =
-                  name.trim().isEmpty ? 'Custom Device' : name.trim();
+              final finalName = name.trim().isEmpty
+                  ? 'Custom Device'
+                  : name.trim();
               final finalPorts = ports
-                  .map((p) => DevicePort(
-                        id: p.id,
-                        type: p.type,
-                        gender: p.gender,
-                        relativeCenter: Offset.zero,
-                      ))
+                  .map(
+                    (p) => DevicePort(
+                      id: p.id,
+                      type: p.type,
+                      gender: p.gender,
+                      relativeCenter: Offset.zero,
+                    ),
+                  )
                   .toList();
               final template = editingTemplate != null
                   ? DeviceTemplate(
@@ -194,90 +346,206 @@ Future<({bool deleted, CableType? cableType})?> showCustomCableDialog(
   Color selectedColor = editingType?.color ?? Colors.black;
 
   const colors = [
-    Colors.black, Colors.white, Colors.blue, Colors.red,
-    Colors.green, Colors.orange, Colors.purple, Colors.grey,
+    Colors.black,
+    Colors.white,
+    Colors.blue,
+    Colors.red,
+    Colors.green,
+    Colors.orange,
+    Colors.purple,
+    Colors.grey,
   ];
+
+  final nameController = TextEditingController(text: name);
 
   return showDialog<({bool deleted, CableType? cableType})>(
     context: context,
     builder: (context) => StatefulBuilder(
       builder: (context, setDialogState) => AlertDialog(
-        title: Text(editingType != null ? 'Edit Custom Cable' : 'Create Custom Cable'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          editingType != null ? 'Edit Custom Cable' : 'Create Custom Cable',
+        ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TextField(
-                controller: TextEditingController(text: name),
+                controller: nameController,
                 decoration: const InputDecoration(
                   labelText: 'Cable Name (e.g., Custom USB)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.cable),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 ),
                 onChanged: (val) => name = val,
               ),
-              const SizedBox(height: 16),
-              const Text('End 1:', style: TextStyle(fontWeight: FontWeight.bold)),
-              Row(
-                children: [
-                  DropdownButton<PortType>(
-                    value: end1Type,
-                    items: PortType.values
-                        .map((t) => DropdownMenuItem(value: t, child: Text(t.name)))
-                        .toList(),
-                    onChanged: (val) => setDialogState(() => end1Type = val!),
-                  ),
-                  const SizedBox(width: 16),
-                  DropdownButton<PortGender>(
-                    value: end1Gender,
-                    items: PortGender.values
-                        .map((g) => DropdownMenuItem(value: g, child: Text(g.name)))
-                        .toList(),
-                    onChanged: (val) => setDialogState(() => end1Gender = val!),
-                  ),
-                ],
+              const SizedBox(height: 24),
+              const Text(
+                'End 1:',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey),
               ),
-              const SizedBox(height: 16),
-              const Text('End 2:', style: TextStyle(fontWeight: FontWeight.bold)),
-              Row(
-                children: [
-                  DropdownButton<PortType>(
-                    value: end2Type,
-                    items: PortType.values
-                        .map((t) => DropdownMenuItem(value: t, child: Text(t.name)))
-                        .toList(),
-                    onChanged: (val) => setDialogState(() => end2Type = val!),
-                  ),
-                  const SizedBox(width: 16),
-                  DropdownButton<PortGender>(
-                    value: end2Gender,
-                    items: PortGender.values
-                        .map((g) => DropdownMenuItem(value: g, child: Text(g.name)))
-                        .toList(),
-                    onChanged: (val) => setDialogState(() => end2Gender = val!),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              const Text('Color:', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        border: Border.all(color: Colors.grey[300]!),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<PortType>(
+                          value: end1Type,
+                          items: PortType.values
+                              .map(
+                                (t) => DropdownMenuItem(
+                                  value: t,
+                                  child: Text(t.name.toUpperCase(), style: const TextStyle(fontSize: 12)),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (val) => setDialogState(() => end1Type = val!),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        border: Border.all(color: Colors.grey[300]!),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<PortGender>(
+                          value: end1Gender,
+                          items: PortGender.values
+                              .map(
+                                (g) => DropdownMenuItem(
+                                  value: g,
+                                  child: Text(g.name.toUpperCase(), style: const TextStyle(fontSize: 12)),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (val) => setDialogState(() => end1Gender = val!),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'End 2:',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        border: Border.all(color: Colors.grey[300]!),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<PortType>(
+                          value: end2Type,
+                          items: PortType.values
+                              .map(
+                                (t) => DropdownMenuItem(
+                                  value: t,
+                                  child: Text(t.name.toUpperCase(), style: const TextStyle(fontSize: 12)),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (val) => setDialogState(() => end2Type = val!),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        border: Border.all(color: Colors.grey[300]!),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<PortGender>(
+                          value: end2Gender,
+                          items: PortGender.values
+                              .map(
+                                (g) => DropdownMenuItem(
+                                  value: g,
+                                  child: Text(g.name.toUpperCase(), style: const TextStyle(fontSize: 12)),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (val) => setDialogState(() => end2Gender = val!),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Cable Color:',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey),
+              ),
+              const SizedBox(height: 12),
               Wrap(
-                spacing: 8,
-                runSpacing: 8,
+                spacing: 12,
+                runSpacing: 12,
                 children: colors
-                    .map((c) => GestureDetector(
-                          onTap: () => setDialogState(() => selectedColor = c),
-                          child: Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: c,
-                              shape: BoxShape.circle,
-                              border: selectedColor == c
-                                  ? Border.all(color: Colors.blueAccent, width: 3)
-                                  : Border.all(color: Colors.grey.shade400, width: 1),
-                            ),
+                    .map(
+                      (c) => GestureDetector(
+                        onTap: () => setDialogState(() => selectedColor = c),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: c,
+                            shape: BoxShape.circle,
+                            border: selectedColor == c
+                                ? Border.all(color: Colors.blue, width: 3)
+                                : Border.all(
+                                    color: Colors.grey.shade300,
+                                    width: 1,
+                                  ),
+                            boxShadow: [
+                              if (selectedColor == c)
+                                BoxShadow(
+                                  color: Colors.blue.withValues(alpha: 0.3),
+                                  blurRadius: 8,
+                                  spreadRadius: 2,
+                                ),
+                            ],
                           ),
-                        ))
+                          child: selectedColor == c
+                              ? Icon(
+                                  Icons.check,
+                                  color: c.computeLuminance() > 0.5
+                                      ? Colors.black
+                                      : Colors.white,
+                                  size: 18,
+                                )
+                              : null,
+                        ),
+                      ),
+                    )
                     .toList(),
               ),
             ],
@@ -296,9 +564,18 @@ Future<({bool deleted, CableType? cableType})?> showCustomCableDialog(
             child: const Text('Cancel'),
           ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
             onPressed: () {
-              final finalName =
-                  name.trim().isEmpty ? 'Custom Cable' : name.trim();
+              final finalName = name.trim().isEmpty
+                  ? 'Custom Cable'
+                  : name.trim();
               final newCableType = CableType(
                 name: finalName,
                 end1Type: end1Type,

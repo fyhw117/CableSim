@@ -517,7 +517,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                     const double minWidth = 100.0;
                     const double minHeight = 70.0;
                     const double portCellWidth = 28.0;
-                    const double portCellHeight = 25.0;
+                    const double portCellHeight = 26.0; // Increased from 25
                     const int columns = 3;
                     const double sidePadding = 8.0;
 
@@ -536,7 +536,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
 
                     double textHeight = textPainter.height;
                     double topPadding =
-                        12.0 + textHeight + 8.0; // Margin + Text + Gap
+                        8.0 + textHeight + 10.0; // Increased gap from 8 to 14
 
                     // Calculate rows needed
                     int rowsNeeded = (node.ports.length / columns).ceil();
@@ -565,15 +565,15 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                           });
                         },
                         onPanUpdate: (details) {
-                        setState(() {
-                          node.position += details.delta;
-                          // Prevent node from going into the sidebar area (dx < 0)
-                          // which would make it lose hit-testing.
-                          if (node.position.dx < 0) {
-                            node.position = Offset(0, node.position.dy);
-                          }
-                        });
-                      },
+                          setState(() {
+                            node.position += details.delta;
+                            // Prevent node from going into the sidebar area (dx < 0)
+                            // which would make it lose hit-testing.
+                            if (node.position.dx < 0) {
+                              node.position = Offset(0, node.position.dy);
+                            }
+                          });
+                        },
                         child: Container(
                           width: nodeWidth,
                           height: nodeHeight,
@@ -658,7 +658,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   void _recalculatePortPositions(DeviceNode node) {
     const double minWidth = 100.0;
     const double portCellWidth = 28.0;
-    const double portCellHeight = 25.0;
+    const double portCellHeight = 26.0; // Increased from 25
     const int columns = 3;
     const double sidePadding = 8.0;
 
@@ -693,8 +693,8 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
 
   Widget _buildPortWidget(DeviceNode node, DevicePort port) {
     return Positioned(
-      left: port.relativeCenter.dx - 16,
-      top: port.relativeCenter.dy - 12,
+      left: port.relativeCenter.dx - 12, // Center on X (24/2)
+      top: port.relativeCenter.dy - 9, // Center on Y (18/2)
       child: Tooltip(
         message: '${port.type.name} (${port.gender.name})',
         child: Container(
