@@ -564,10 +564,15 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                           });
                         },
                         onPanUpdate: (details) {
-                          setState(() {
-                            node.position += details.delta;
-                          });
-                        },
+                        setState(() {
+                          node.position += details.delta;
+                          // Prevent node from going into the sidebar area (dx < 0)
+                          // which would make it lose hit-testing.
+                          if (node.position.dx < 0) {
+                            node.position = Offset(0, node.position.dy);
+                          }
+                        });
+                      },
                         child: Container(
                           width: nodeWidth,
                           height: nodeHeight,
@@ -819,8 +824,16 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
             setState(() {
               if (endpointIndex == 1) {
                 cable.dragPos1 = cable.dragPos1! + details.delta;
+                // Prevent endpoint from going into the sidebar area
+                if (cable.dragPos1!.dx < 0) {
+                  cable.dragPos1 = Offset(0, cable.dragPos1!.dy);
+                }
               } else {
                 cable.dragPos2 = cable.dragPos2! + details.delta;
+                // Prevent endpoint from going into the sidebar area
+                if (cable.dragPos2!.dx < 0) {
+                  cable.dragPos2 = Offset(0, cable.dragPos2!.dy);
+                }
               }
             });
           }
