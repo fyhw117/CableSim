@@ -504,6 +504,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                         setState(() {
                           selectedNodeId = null;
                           selectedCableId = null;
+                          isSidebarOpen = false;
                         });
                       },
                       behavior: HitTestBehavior.translucent,
