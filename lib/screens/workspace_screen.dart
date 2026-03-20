@@ -445,10 +445,6 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'CableSim',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
         backgroundColor: Theme.of(context).colorScheme.primary,
         elevation: 0,
         leading: IconButton(
