@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/models.dart';
+import '../utils/utils.dart';
 
 /// The sidebar panel displayed on the left side of the workspace.
 /// Stateless — all actions are passed in as callbacks.
@@ -191,12 +192,12 @@ class _CableButton extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 12,
-            height: 12,
-            decoration: BoxDecoration(color: type.color, shape: BoxShape.circle),
+          Icon(
+            getIconForPortType(type.end1Type),
+            size: 20,
+            color: type.color,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(type.name, style: const TextStyle(fontSize: 13)),
           ),

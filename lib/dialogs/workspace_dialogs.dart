@@ -51,8 +51,8 @@ Future<DevicePort?> showAddPortDialog(BuildContext context) {
                           child: Row(
                             children: [
                               Icon(
-                                Icons.circle,
-                                size: 10,
+                                getIconForPortType(t),
+                                size: 16,
                                 color: getColorForPortType(t),
                               ),
                               const SizedBox(width: 12),
@@ -232,13 +232,10 @@ Future<({bool deleted, DeviceTemplate? template})?> showCustomDeviceDialog(
                               final port = ports[index];
                               return ListTile(
                                 dense: true,
-                                leading: Container(
-                                  width: 12,
-                                  height: 12,
-                                  decoration: BoxDecoration(
-                                    color: getColorForPortType(port.type),
-                                    shape: BoxShape.circle,
-                                  ),
+                                leading: Icon(
+                                  getIconForPortType(port.type),
+                                  size: 18,
+                                  color: getColorForPortType(port.type),
                                 ),
                                 title: Text(
                                   port.type.name,

@@ -11,6 +11,19 @@ Color getColorForPortType(PortType type) {
     case PortType.typeA:
       return Colors.cyan;
     case PortType.acPower:
-      return Colors.redAccent;
+      return Colors.blueGrey.shade800;
+  }
+}
+
+IconData getIconForPortType(PortType type) {
+  switch (type) {
+    case PortType.hdmi:
+      return Icons.settings_input_hdmi;
+    case PortType.typeC:
+      return Icons.usb_rounded;
+    case PortType.typeA:
+      return Icons.usb;
+    case PortType.acPower:
+      return Icons.power; // Clearly represents a power plug
   }
 }

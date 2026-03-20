@@ -96,7 +96,7 @@ class PortShapePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = gender == PortGender.female ? Colors.black87 : Colors.grey[300]!
+      ..color = Colors.grey[300]!
       ..style = PaintingStyle.fill;
 
     final borderPaint = Paint()
@@ -171,30 +171,47 @@ class PortShapePainter extends CustomPainter {
         );
       }
     } else if (type == PortType.acPower) {
-      // AC Power: 2 or 3 prongs
-      final rect = Rect.fromLTWH(4, 2, size.width - 8, size.height - 4);
-      canvas.drawRect(rect, paint);
-      canvas.drawRect(rect, borderPaint);
+      // AC Power: Common 2-prong rounded shape
+      final rrect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(2, 2, size.width - 4, size.height - 4),
+        const Radius.circular(4),
+      );
+      
+      canvas.drawRRect(rrect, paint);
+      canvas.drawRRect(rrect, borderPaint);
 
       if (gender == PortGender.male) {
-        // 2 Prongs sticking out
-        canvas.drawRect(
-          Rect.fromLTWH(size.width / 2 - 6, size.height / 2 - 4, 3, 8),
+        // 2 standard pins (no ground)
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(size.width / 2 - 6, size.height / 2 - 3.5, 3, 7),
+            const Radius.circular(0.5),
+          ),
           pinPaint,
         );
-        canvas.drawRect(
-          Rect.fromLTWH(size.width / 2 + 3, size.height / 2 - 4, 3, 8),
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(size.width / 2 + 3, size.height / 2 - 3.5, 3, 7),
+            const Radius.circular(0.5),
+          ),
           pinPaint,
         );
       } else {
         // 2 Holes
-        canvas.drawRect(
-          Rect.fromLTWH(size.width / 2 - 6, size.height / 2 - 3, 3, 6),
-          Paint()..color = Colors.black,
+        final holePaint = Paint()..color = Colors.black;
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(size.width / 2 - 6, size.height / 2 - 3, 2.5, 6),
+            const Radius.circular(0.5),
+          ),
+          holePaint,
         );
-        canvas.drawRect(
-          Rect.fromLTWH(size.width / 2 + 3, size.height / 2 - 3, 3, 6),
-          Paint()..color = Colors.black,
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(size.width / 2 + 3.5, size.height / 2 - 3, 2.5, 6),
+            const Radius.circular(0.5),
+          ),
+          holePaint,
         );
       }
     }
