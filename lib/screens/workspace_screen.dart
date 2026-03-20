@@ -749,7 +749,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       textAlign: TextAlign.center,
     )..layout(maxWidth: minWidth - (sidePadding * 2));
 
-    final double topPadding = 12.0 + textPainter.height + 8.0;
+    final double topPadding = 12.0 + textPainter.height + 10.0; // Fixed gap: 10.0
 
     for (int i = 0; i < node.ports.length; i++) {
       final int row = i ~/ columns;
@@ -871,8 +871,8 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     final isDragging =
         draggingCableId == cable.id && draggingEndpoint == endpointIndex;
     return Positioned(
-      left: position.dx - 18,
-      top: position.dy - 14,
+      left: position.dx - 14, // Center on X (28/2)
+      top: position.dy - 11, // Center on Y (22/2)
       child: GestureDetector(
         onTap: () {
           setState(() {
