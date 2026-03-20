@@ -400,6 +400,47 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     _triggerAutoSave(immediate: true);
   }
 
+  Future<void> _resetWorkspace() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset Workspace?'),
+        content: const Text(
+          'This will remove all devices and cables from the current workspace. This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Reset Everything'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      setState(() {
+        nodes.clear();
+        cables.clear();
+        selectedNodeId = null;
+        selectedCableId = null;
+      });
+      _triggerAutoSave(immediate: true);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Workspace reset completed.')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -489,6 +530,11 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                 ),
               );
             },
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            tooltip: 'Reset Workspace',
+            onPressed: _resetWorkspace,
           ),
           const SizedBox(width: 12),
         ],
